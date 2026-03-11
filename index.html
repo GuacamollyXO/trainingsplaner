@@ -1,0 +1,3871 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainingsplaner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0e0f11;
+    --surface: #161719;
+    --surface2: #1e2023;
+    --border: #2a2c30;
+    --accent: #c8f135;
+    --accent2: #3df5a0;
+    --muted: #555860;
+    --text: #e8eaed;
+    --text2: #9da0a8;
+    --red: #ff4d6d;
+    --orange: #ff9f43;
+    --blue: #4ea8de;
+    --purple: #9b72cf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 40px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(14,15,17,0.95);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .week-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text2);
+    flex-wrap: wrap;
+  }
+
+  .week-nav button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    transition: all 0.15s;
+  }
+
+  .week-nav button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .week-label {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    min-width: 120px;
+    text-align: center;
+  }
+
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 40px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .tab.active {
+    color: var(--accent);
+  }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .tab:hover:not(.active) { color: var(--text2); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* WEEK LAYOUT */
+  .week-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .week-day-block {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+  }
+
+  .week-day-block:hover { border-color: var(--muted); }
+  .week-day-block.has-fit { border-color: #1e3040; }
+  .week-day-block.is-today { border-color: #3a3f2a; }
+  .week-day-block.drag-over { border-color: var(--accent); background: rgba(200,241,53,0.03); }
+
+  .week-day-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 16px 0 16px;
+    background: var(--surface2);
+    border-right: 1px solid var(--border);
+    position: relative;
+    gap: 2px;
+  }
+
+  .week-day-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text2);
+  }
+
+  .week-day-date {
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .week-day-block.is-today .week-day-name { color: var(--accent); }
+
+  .today-pill {
+    margin-top: 6px;
+    background: var(--accent);
+    color: #000;
+    font-size: 7px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    padding: 2px 5px;
+    letter-spacing: 0.1em;
+  }
+
+  .week-day-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* RAD section */
+  .day-rad {
+    padding: 14px 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-height: 80px;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .day-rad:hover { background: rgba(255,255,255,0.02); }
+
+  .day-section-label {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .day-section-label::before {
+    content: '';
+    width: 3px;
+    height: 8px;
+    display: inline-block;
+    border-radius: 1px;
+  }
+  .label-rad { color: var(--accent2); }
+  .label-rad::before { background: var(--accent2); }
+  .label-kraft { color: var(--purple); }
+  .label-kraft::before { background: var(--purple); }
+
+  /* KRAFT section */
+  .day-kraft {
+    border-top: 1px solid var(--border);
+    background: rgba(155,114,207,0.02);
+    overflow: hidden;
+  }
+
+  .day-kraft-header {
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .day-kraft-header:hover { background: rgba(155,114,207,0.06); }
+
+  .kraft-toggle-icon {
+    font-size: 9px;
+    color: var(--muted);
+    transition: transform 0.2s;
+    margin-left: 6px;
+  }
+  .day-kraft.is-open .kraft-toggle-icon { transform: rotate(180deg); }
+
+  .day-kraft-body {
+    display: none;
+    padding: 0 16px 12px;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .day-kraft.is-open .day-kraft-body { display: flex; }
+
+  .day-kraft-empty {
+    font-size: 10px;
+    color: rgba(155,114,207,0.3);
+    font-style: italic;
+  }
+
+  .training-type-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    border: 1px solid;
+  }
+
+  .badge-zone2 { color: var(--accent2); border-color: var(--accent2); background: rgba(61,245,160,0.06); }
+  .badge-recovery { color: var(--blue); border-color: var(--blue); background: rgba(78,168,222,0.06); }
+  .badge-stimulus { color: var(--orange); border-color: var(--orange); background: rgba(255,159,67,0.06); }
+  .badge-long { color: var(--purple); border-color: var(--purple); background: rgba(155,114,207,0.06); }
+  .badge-free { color: var(--muted); border-color: var(--muted); background: transparent; }
+  .badge-other { color: var(--text2); border-color: var(--text2); background: transparent; }
+
+  .plan-summary {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .plan-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text2);
+  }
+
+  .plan-stat-val {
+    color: var(--text);
+    font-size: 11px;
+  }
+
+  .plan-notes {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.5;
+    font-style: italic;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    margin-top: 2px;
+  }
+
+  .upload-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    padding: 5px 8px;
+    background: rgba(78,168,222,0.08);
+    border: 1px solid rgba(78,168,222,0.2);
+    color: var(--blue);
+    margin-top: auto;
+  }
+
+  .upload-indicator svg { flex-shrink: 0; }
+
+  .empty-day {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px dashed transparent;
+    transition: all 0.15s;
+  }
+
+  .day-card:hover .empty-day {
+    border-color: var(--border);
+    color: var(--muted);
+  }
+
+  .add-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+
+  .add-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.2s;
+  }
+
+  .modal-overlay.open .modal {
+    transform: translateY(0);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 5;
+  }
+
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    padding: 4px;
+    transition: color 0.15s;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  .modal-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text2);
+  }
+
+  input, select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  select option { background: var(--surface2); }
+
+  textarea { resize: vertical; min-height: 70px; }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 9px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .btn-ghost {
+    background: none;
+    border-color: var(--border);
+    color: var(--text2);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--text2);
+    color: var(--text);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 500;
+  }
+
+  .btn-primary:hover {
+    background: #d4ff45;
+  }
+
+  .btn-danger {
+    background: none;
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .btn-danger:hover {
+    background: var(--red);
+    color: #fff;
+  }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--blue);
+    background: rgba(78,168,222,0.04);
+  }
+
+  .upload-zone input[type=file] {
+    display: none;
+  }
+
+  .upload-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+  }
+
+  .upload-text {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .upload-text strong {
+    color: var(--blue);
+  }
+
+  /* ANALYSIS PANEL */
+  .analysis-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .analysis-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+  }
+
+  .analysis-subtitle {
+    color: var(--text2);
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .stat-unit {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  .stat-target {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+
+  .stat-on-target { color: var(--accent2); }
+  .stat-above-target { color: var(--orange); }
+  .stat-below-target { color: var(--blue); }
+
+  .chart-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+
+  .chart-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text2);
+    margin-bottom: 16px;
+  }
+
+  canvas {
+    width: 100% !important;
+    display: block;
+  }
+
+  .zone-breakdown {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .zone-bar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .zone-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text2);
+    text-align: center;
+  }
+
+  .zone-bar-wrap {
+    height: 80px;
+    display: flex;
+    align-items: flex-end;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .zone-bar {
+    width: 100%;
+    transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .z1 { background: #4ea8de; }
+  .z2 { background: #3df5a0; }
+  .z3 { background: #c8f135; }
+  .z4 { background: #ff9f43; }
+  .z5 { background: #ff4d6d; }
+
+  .zone-pct {
+    font-size: 10px;
+    text-align: center;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+  }
+
+  /* COACH EXPORT */
+  .coach-export {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    margin-top: 24px;
+  }
+
+  .coach-export-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .coach-export-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text2);
+  }
+
+  .coach-export-body {
+    padding: 20px;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text2);
+    white-space: pre-wrap;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .coach-export-body strong {
+    color: var(--text);
+  }
+
+  /* COMPARISON */
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .comparison-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .comparison-card-title {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .comparison-card-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .comp-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(42,44,48,0.5);
+    font-size: 11px;
+  }
+
+  .comp-row:last-child { border-bottom: none; }
+  .comp-key { color: var(--text2); }
+  .comp-val { color: var(--text); }
+  .comp-diff { font-size: 10px; margin-left: 6px; }
+  .diff-plus { color: var(--accent2); }
+  .diff-minus { color: var(--red); }
+
+  /* EMPTY STATES */
+  .empty-analysis {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+
+  .empty-analysis h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+
+  .empty-analysis p {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .select-day-prompt {
+    text-align: center;
+    padding: 40px;
+    color: var(--text2);
+    font-size: 12px;
+    border: 1px dashed var(--border);
+  }
+
+  /* FIT upload in modal */
+  .fit-upload-section {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+
+  .fit-uploaded-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(78,168,222,0.07);
+    border: 1px solid rgba(78,168,222,0.2);
+    font-size: 11px;
+    color: var(--blue);
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* Kraft card specifics */
+  .kraft-group { margin-bottom: 4px; }
+  .kraft-group-name {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--purple);
+    margin-bottom: 3px;
+    font-weight: 500;
+  }
+  .kraft-exercise {
+    font-size: 10px;
+    color: var(--text2);
+    line-height: 1.5;
+    padding-left: 8px;
+    border-left: 2px solid rgba(155,114,207,0.3);
+  }
+  .kraft-exercise span { color: var(--text); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    header { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
+    main { padding: 20px; }
+    .week-day-block { grid-template-columns: 52px 1fr; }
+    .week-day-name { font-size: 12px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .zone-breakdown { grid-template-columns: repeat(5, 1fr); }
+    .comparison-grid { grid-template-columns: 1fr; }
+    .week-nav { gap: 4px; }
+    .week-nav button { padding: 5px 8px; font-size: 10px; }
+  }
+
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(14,15,17,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    display: none;
+  }
+
+  .loading-overlay.visible { display: flex; }
+
+  .loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .loader-bars {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    height: 30px;
+  }
+
+  .loader-bar {
+    width: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: bar 0.8s ease-in-out infinite alternate;
+  }
+
+  .loader-bar:nth-child(2) { animation-delay: 0.1s; }
+  .loader-bar:nth-child(3) { animation-delay: 0.2s; }
+  .loader-bar:nth-child(4) { animation-delay: 0.3s; }
+  .loader-bar:nth-child(5) { animation-delay: 0.4s; }
+
+  @keyframes bar {
+    from { height: 6px; opacity: 0.3; }
+    to { height: 30px; opacity: 1; }
+  }
+
+  .loader-text {
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .tag-rest {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 20px 0;
+    text-align: center;
+  }
+
+  /* alert/feedback */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 12px 20px;
+    font-size: 12px;
+    z-index: 400;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s;
+    max-width: 360px;
+  }
+
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* Undo toast */
+  .toast-undo {
+    display: inline-block;
+    margin-left: 12px;
+    padding: 3px 10px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .toast-undo:hover { background: #d4ff45; }
+
+  /* PRESET MANAGER */
+  .preset-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    transition: background 0.1s;
+  }
+  .preset-item:hover { background: var(--surface2); }
+  .preset-item:last-child { border-bottom: none; }
+  .preset-item-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    flex: 1;
+  }
+  .preset-item-meta {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .preset-item-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .preset-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  /* FIT ANALYSIS BUTTON on day card */
+  .fit-analysis-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 7px 10px;
+    background: rgba(78,168,222,0.08);
+    border: 1px solid rgba(78,168,222,0.25);
+    color: var(--blue);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+  .fit-analysis-btn:hover {
+    background: rgba(78,168,222,0.16);
+    border-color: var(--blue);
+  }
+
+  /* ---- WEEKLY SUMMARY BAR ---- */
+  .week-summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr) auto;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .week-summary-cell {
+    background: var(--surface);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .week-summary-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .week-summary-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; line-height: 1; }
+  .week-summary-sub { font-size: 9px; color: var(--muted); }
+  .week-summary-actions {
+    background: var(--surface);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  /* Missing FIT highlight */
+  .fit-missing-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    color: var(--orange);
+    padding: 4px 8px;
+    border: 1px solid rgba(255,159,67,0.3);
+    background: rgba(255,159,67,0.05);
+    margin-top: 2px;
+  }
+
+  /* FIT previously loaded hint */
+  .fit-was-loaded-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    color: var(--blue);
+    padding: 4px 8px;
+    border: 1px solid rgba(78,168,222,0.2);
+    background: rgba(78,168,222,0.05);
+    margin-top: 2px;
+    opacity: 0.7;
+  }
+
+  /* Post-training section in modal */
+  .post-training-section {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-top: 4px;
+  }
+  .post-section-title {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--accent2); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .post-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .rpe-btn-row { display: flex; gap: 5px; flex-wrap: wrap; }
+  .rpe-btn {
+    width: 30px; height: 30px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 11px; cursor: pointer; transition: all 0.12s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rpe-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .rpe-btn.selected { background: var(--accent2); border-color: var(--accent2); color: #000; }
+
+  /* STATS TAB */
+  .stats-panel { display: none; }
+  .stats-panel.active { display: block; }
+  .stats-section-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+  .stats-section-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+  .period-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px; margin-bottom: 24px;
+  }
+  .period-week-card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 12px 14px; transition: border-color 0.15s; cursor: pointer;
+  }
+  .period-week-card.current-week { border-color: var(--accent); }
+  .period-week-card:hover { border-color: var(--muted); }
+  .period-week-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .period-week-tss { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; color: var(--accent); line-height: 1; margin-bottom: 2px; }
+  .period-week-meta { font-size: 9px; color: var(--muted); }
+  .period-week-phase { font-size: 8px; padding: 2px 6px; margin-top: 6px; display: inline-block; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+  .period-tss-bar-wrap { height: 3px; background: var(--surface2); margin-top: 10px; overflow: hidden; }
+  .period-tss-bar { height: 100%; background: var(--accent); }
+  .chart-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 20px; margin-bottom: 16px;
+  }
+  .chart-title-row {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 16px;
+  }
+
+  /* COACH EXPORT MODAL */
+  .export-option-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 12px; cursor: pointer;
+  }
+  .export-option-row:last-child { border-bottom: none; }
+  .export-option-row input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+  .export-preview-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 16px; font-size: 11px; line-height: 1.8; color: var(--text2);
+    white-space: pre-wrap; max-height: 280px; overflow-y: auto;
+    margin-top: 12px; font-family: 'DM Mono', monospace;
+  }
+
+  /* Move training picker */
+  .move-target-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .move-target-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 10px 4px;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .move-target-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .move-target-btn.is-source { border-color: var(--muted); color: var(--muted); opacity: 0.5; cursor: default; }
+  .move-target-btn .move-day-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; margin-bottom: 2px; }
+  .move-target-btn .move-day-date { font-size: 9px; color: var(--muted); }
+
+  /* Phase annotation */
+  .phase-badge {
+    font-size: 8px;
+    padding: 2px 6px;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    border: 1px solid;
+  }
+  .phase-aufbau { color: var(--accent2); border-color: var(--accent2); background: rgba(61,245,160,0.06); }
+  .phase-erholung { color: var(--blue); border-color: var(--blue); background: rgba(78,168,222,0.06); }
+  .phase-peak { color: var(--orange); border-color: var(--orange); background: rgba(255,159,67,0.06); }
+  .phase-test { color: var(--red); border-color: var(--red); background: rgba(255,77,109,0.06); }
+  .phase-base { color: var(--purple); border-color: var(--purple); background: rgba(155,114,207,0.06); }
+  .phase-übergang { color: var(--muted); border-color: var(--muted); background: transparent; }
+
+  /* Stats filter */
+  .stats-filter-row {
+    display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .stats-filter-btn {
+    padding: 5px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .stats-filter-btn.active { border-color: var(--accent); color: var(--accent); }
+  .stats-filter-btn:hover { border-color: var(--accent); }
+
+  /* Compliance bar */
+  .compliance-bar-wrap {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .compliance-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader">
+    <div class="loader-bars">
+      <div class="loader-bar"></div>
+      <div class="loader-bar"></div>
+      <div class="loader-bar"></div>
+      <div class="loader-bar"></div>
+      <div class="loader-bar"></div>
+    </div>
+    <div class="loader-text">FIT-Datei wird analysiert...</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Trainingsplaner
+  </div>
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)">← zurück</button>
+    <div class="week-label" id="weekLabel"></div>
+    <button onclick="changeWeek(1)">vor →</button>
+    <button onclick="goToToday()" id="todayBtn" style="border-color:var(--accent); color:var(--accent); display:none;">● Heute</button>
+    <button onclick="copyWeekToNext()" style="border-color:var(--muted); color:var(--text2);" title="Wochenplan auf nächste Woche kopieren">⧉ Kopieren</button>
+    <button onclick="openSettings()" style="border-color:var(--muted); color:var(--text2);">⚙ Settings</button>
+    <button onclick="openBackup()" style="border-color:var(--muted); color:var(--text2);" title="Backup & Restore">💾 Backup</button>
+  </div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab active" id="tabPlan" onclick="switchMainTab('plan', this)">Wochenplan</button>
+    <button class="tab" id="tabStats" onclick="switchMainTab('stats', this)">📈 Statistik</button>
+    <div style="margin-left:auto; display:flex; gap:8px; padding-bottom:2px;">
+      <button class="btn btn-ghost" onclick="openCoachExport()" style="padding:6px 14px; font-size:10px;">📋 Coach Export</button>
+      <button class="btn btn-ghost" onclick="openImport()" style="padding:6px 14px; font-size:10px;">↓ Importieren</button>
+    </div>
+  </div>
+
+  <!-- PLAN TAB -->
+  <div class="panel active" id="panel-plan">
+    <div class="week-summary" id="weekSummary"></div>
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+
+  <!-- STATS TAB -->
+  <div class="panel" id="panel-stats">
+    <div style="max-width:1200px;">
+      <div class="stats-section-title">Periodisierung & Entwicklung</div>
+      <div class="stats-section-sub">Alle Wochen mit eingetragenen Trainings · basierend auf FTP <span id="statsftpLabel"></span> W</div>
+
+      <!-- Phase annotation bar -->
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
+        <span style="font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">Phase für aktuelle Woche:</span>
+        <select id="phaseSelect" onchange="savePhaseForWeek()" style="padding:5px 10px; font-size:11px; min-width:140px;">
+          <option value="">— keine —</option>
+          <option value="base">🔵 Grundlagen</option>
+          <option value="aufbau">🟢 Aufbau</option>
+          <option value="peak">🟠 Peak / Wettkampf</option>
+          <option value="erholung">💙 Erholung</option>
+          <option value="test">🔴 Test / FTP-Test</option>
+          <option value="übergang">⚫ Übergang</option>
+        </select>
+      </div>
+
+      <!-- Time filter -->
+      <div class="stats-filter-row" id="statsFilterRow">
+        <button class="stats-filter-btn active" onclick="setStatsFilter('all', this)">Alle</button>
+        <button class="stats-filter-btn" onclick="setStatsFilter(4, this)">4 Wochen</button>
+        <button class="stats-filter-btn" onclick="setStatsFilter(8, this)">8 Wochen</button>
+        <button class="stats-filter-btn" onclick="setStatsFilter(12, this)">12 Wochen</button>
+      </div>
+
+      <div class="period-grid" id="periodGrid"></div>
+
+      <!-- PMC Chart (CTL/ATL/TSB) -->
+      <div class="chart-wrap">
+        <div class="chart-title-row">📊 Performance Management Chart (CTL · ATL · TSB)</div>
+        <canvas id="chartPmc" height="160"></canvas>
+        <div style="display:flex; gap:16px; margin-top:10px; font-size:9px;">
+          <span style="color:#3df5a0;">● CTL (Fitness, 42d)</span>
+          <span style="color:#ff4d6d;">● ATL (Ermüdung, 7d)</span>
+          <span style="color:#c8f135;">● TSB (Form = CTL − ATL)</span>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="chart-title-row">📈 TSS-Verlauf (Wochen)</div>
+        <canvas id="chartTss" height="100"></canvas>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="chart-wrap">
+          <div class="chart-title-row">⚡ Ø Leistung (W) pro Woche</div>
+          <canvas id="chartPower" height="140"></canvas>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title-row">♥ Ø Herzfrequenz pro Woche</div>
+          <canvas id="chartHr" height="140"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-wrap" id="hfZoneChartWrap">
+        <div class="chart-title-row">♥ HF-Zonen Verteilung (alle Trainings mit FIT-Daten)</div>
+        <canvas id="chartHfZones" height="80"></canvas>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Training planen</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- PRESET QUICK LOAD -->
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+        <select id="presetQuickLoad" onchange="loadPresetQuick()" style="flex:1; padding:6px 10px; font-size:10px;">
+          <option value="">— Preset laden —</option>
+        </select>
+        <button class="btn btn-ghost" onclick="saveAsPreset()" style="padding:5px 10px; font-size:9px; white-space:nowrap;">+ Als Preset</button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Trainingstyp</label>
+          <select id="trainType">
+            <option value="zone2">Zone 2</option>
+            <option value="recovery">Recovery</option>
+            <option value="stimulus">Stimulus / Intervalle</option>
+            <option value="long">Long Ride</option>
+            <option value="free">Frei / Ruhetag</option>
+            <option value="other">Sonstiges</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Dauer (min)</label>
+          <input type="text" id="trainDuration" placeholder="z.B. 85–95">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Watt-Ziel</label>
+          <input type="text" id="trainWatt" placeholder="z.B. 120–130 W">
+        </div>
+        <div class="form-group">
+          <label>Puls-Ziel (bpm)</label>
+          <input type="text" id="trainHr" placeholder="z.B. 130–140">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>RPE Ziel (1–10)</label>
+          <input type="number" id="trainRpe" min="1" max="10" placeholder="z.B. 4">
+        </div>
+        <div class="form-group">
+          <label>Intervall-Struktur</label>
+          <input type="text" id="trainIntervals" placeholder="z.B. 3×8 min">
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>Notizen / Coach-Hinweis</label>
+        <textarea id="trainNotes" placeholder="Beschreibung, Besonderheiten, Ziel des Trainings..."></textarea>
+      </div>
+
+      <div class="fit-upload-section">
+        <label style="margin-bottom:10px; display:block;">FIT-Datei (nach dem Training)</label>
+        <div id="fitUploadedInfo" style="display:none;" class="fit-uploaded-info">
+          <span>📊</span>
+          <span id="fitFileName"></span>
+          <button onclick="removeFit()" style="margin-left:auto; background:none; border:none; color:var(--red); cursor:pointer; font-size:14px;">×</button>
+        </div>
+        <div class="upload-zone" id="fitDropZone" onclick="document.getElementById('fitFileInput').click()">
+          <input type="file" id="fitFileInput" accept=".fit" onchange="handleFitUpload(event)">
+          <div class="upload-icon">📡</div>
+          <div class="upload-text"><strong>.fit Datei</strong> hochladen<br><span style="font-size:10px;">von Garmin, Wahoo, Zwift etc.</span></div>
+        </div>
+      </div>
+
+      <!-- POST-TRAINING SECTION -->
+      <div class="post-training-section">
+        <div class="post-section-title">Nach dem Training</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>RPE Tatsächlich</label>
+            <div class="rpe-btn-row" id="rpeActualBtns"></div>
+            <input type="hidden" id="trainRpeActual">
+          </div>
+          <div class="form-group">
+            <label>Dauer tatsächlich (min)</label>
+            <input type="text" id="trainDurationActual" placeholder="z.B. 92">
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>Wie war's? Notizen nach dem Training</label>
+          <textarea id="trainPostNotes" rows="2" placeholder="Gefühl, Besonderheiten, Abweichungen vom Plan..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="openMoveTraining()" id="moveBtn" style="display:none; border-color:var(--purple); color:var(--purple);">↔ Verschieben</button>
+      <button class="btn btn-danger" id="deleteBtn" onclick="deleteRadOnly()" style="display:none;">🗑 Rad löschen</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveDay()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- KRAFT MODAL -->
+<div class="modal-overlay" id="kraftOverlay" onclick="closeKraftOnOverlay(event)">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header">
+      <div class="modal-title" id="kraftModalTitle">💪 Krafttraining</div>
+      <button class="modal-close" onclick="closeKraftModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:12px; line-height:1.6;">
+        Trage dein Krafttraining in folgendem Format ein:<br>
+        <span style="color:var(--muted); font-size:10px;">Push • Liegestütze → 20–30 • Bankdrücken → 3×10</span>
+      </div>
+      <div class="form-group full">
+        <label>Einheiten (eine pro Zeile, Gruppen mit •)</label>
+        <textarea id="kraftInput" style="min-height:200px; font-size:11px; line-height:1.7;" placeholder="Push • Liegestütze → 20–30 • Schulterdrücken → 12–15
+Pull • Kurzhantelrudern → 12–15 je Seite • Hammer Curls → 12–15
+Core • Plank → 45–60 Sek • Crunches → 15–20
+Beine • Squats → 15–20"></textarea>
+      </div>
+      <div style="font-size:10px; color:var(--muted); margin-top:4px;">
+        Format: <code style="color:var(--text2);">Gruppe • Übung → Wiederholungen • Übung → Wiederholungen</code>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="kraftDeleteBtn" onclick="deleteKraftOnly()" style="display:none;">🗑 Kraft löschen</button>
+      <button class="btn btn-ghost" onclick="closeKraftModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveKraft()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsOverlay" onclick="closeSettingsOnOverlay(event)">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">⚙ Einstellungen</div>
+      <button class="modal-close" onclick="closeSettings()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group full">
+        <label>FTP — Functional Threshold Power</label>
+        <input type="number" id="settingsFtp" min="50" max="600" placeholder="z.B. 220" oninput="updateZonePreview()">
+        <div style="font-size:10px; color:var(--muted); margin-top:6px;">Deine aktuelle FTP in Watt. Basis für TSS, IF und alle Leistungszonen.</div>
+      </div>
+      <div class="form-group full" style="margin-top:10px;">
+        <label>Max. Herzfrequenz (bpm)</label>
+        <input type="number" id="settingsMaxHr" min="100" max="230" placeholder="z.B. 190">
+        <div style="font-size:10px; color:var(--muted); margin-top:6px;">Für HF-Zonen in der Statistik-Auswertung.</div>
+      </div>
+      <div style="margin-top:14px; padding:14px; background:var(--surface2); border:1px solid var(--border);">
+        <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:12px;">Leistungszonen — automatisch berechnet</div>
+        <div id="zonePreviewGrid" style="display:flex; flex-direction:column; gap:6px;"></div>
+        <div style="font-size:9px; color:var(--border); margin-top:10px;">Grenzen nach Coggan-Schema: Z1 &lt;55% · Z2 55–75% · Z3 75–90% · Z4 90–105% · Z5 &gt;105% FTP</div>
+      </div>
+      <div class="form-group full" style="margin-top:14px;">
+        <label>Standard-Kraftprogramm</label>
+        <textarea id="settingsDefaultKraft" style="min-height:120px; font-size:11px; line-height:1.7;" placeholder="Push • Liegestütze → 20–30 • Schulterdrücken → 12–15&#10;Pull • Kurzhantelrudern → 12–15 je Seite&#10;Core • Plank → 45–60 Sek"></textarea>
+        <div style="font-size:10px; color:var(--muted); margin-top:6px;">Wird als Vorlage beim Öffnen der Kraft-Eingabe vorausgefüllt.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSettings()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYSIS OVERLAY -->
+<div class="modal-overlay" id="analysisOverlay" onclick="closeAnalysisOnOverlay(event)" style="align-items:flex-start; padding:0; overflow-y:auto;">
+  <div style="background:var(--bg); width:100%; min-height:100vh; padding:32px 40px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:28px;">
+      <button class="btn btn-ghost" onclick="closeAnalysis()" style="padding:7px 16px;">← Zurück zum Plan</button>
+      <button class="btn btn-ghost" onclick="copyCoachText()" style="border-color:var(--accent2); color:var(--accent2);">📋 Coach-Text kopieren</button>
+    </div>
+    <div id="analysisContent" style="max-width:1200px; margin:0 auto;"></div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="importOverlay" onclick="closeImportOnOverlay(event)">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <div class="modal-title">↓ Plan importieren</div>
+      <button class="modal-close" onclick="closeImport()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; gap:2px; margin-bottom:16px; border-bottom:1px solid var(--border);">
+        <button class="tab active" id="importTabRad" onclick="switchImportTab('rad')" style="font-size:11px;">🚴 Radtraining</button>
+        <button class="tab" id="importTabKraft" onclick="switchImportTab('kraft')" style="font-size:11px;">💪 Krafttraining</button>
+      </div>
+      <div id="importFormatRad">
+        <div style="background:var(--surface2); border:1px solid var(--border); padding:14px; margin-bottom:16px;">
+          <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:10px;">Format — eine Zeile pro Tag</div>
+          <div style="font-size:11px; color:var(--text2); line-height:1.6; margin-bottom:10px;">
+            <span style="color:var(--accent2);">Wochentag</span> - <span style="color:var(--text);">Typ</span>, <span style="color:var(--orange);">Dauer</span>, <span style="color:var(--accent);">Watt</span>, <span style="color:var(--red);">Puls</span>, <span style="color:var(--blue);">RPE</span>, <span style="color:var(--purple);">Intervall</span>, <span style="color:var(--muted);">Notiz</span>
+          </div>
+          <div style="padding:10px; background:var(--bg); border:1px solid var(--border); font-size:10px; color:var(--muted); line-height:2; font-family:'DM Mono',monospace;">
+            Mo - Zone 2, 90, 125-130, 130-140, 4, -, ruhig fahren<br>
+            Di - Recovery, 60, 95-110, 115-125, 3, -, sehr locker<br>
+            Mi - Stimulus, 75, -, 140-148, 6, 3x8min, nie härter als geplant
+          </div>
+          <div style="margin-top:8px; font-size:9px; color:var(--muted);">Felder mit <code>-</code> füllen wenn nicht benötigt.</div>
+        </div>
+      </div>
+      <div id="importFormatKraft" style="display:none;">
+        <div style="background:var(--surface2); border:1px solid var(--border); padding:14px; margin-bottom:16px;">
+          <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:10px;">Format — eine Zeile pro Tag</div>
+          <div style="font-size:11px; color:var(--text2); line-height:1.6; margin-bottom:10px;">
+            <span style="color:var(--accent2);">Tag</span> - <span style="color:var(--purple);">Gruppe • Übung → Reps</span>
+          </div>
+          <div style="padding:10px; background:var(--bg); border:1px solid var(--border); font-size:10px; color:var(--muted); line-height:2; font-family:'DM Mono',monospace;">
+            Mo - Push • Liegestütze → 20-30 • Schulterdrücken → 12-15<br>
+            Mo - Pull • Kurzhantelrudern → 12-15 je Seite
+          </div>
+          <div style="margin-top:8px; font-size:9px; color:var(--muted);">Mehrere Zeilen pro Tag werden zusammengeführt.</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; padding:12px; background:var(--surface2); border:1px solid var(--border);">
+        <span style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap;">Zielwoche</span>
+        <button onclick="importWeekShift(-1)" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">←</button>
+        <span id="importWeekLabel" style="font-family:'Syne',sans-serif; font-weight:600; font-size:12px; flex:1; text-align:center;"></span>
+        <button onclick="importWeekShift(1)" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">→</button>
+        <button onclick="resetImportWeek()" class="btn btn-ghost" style="padding:4px 10px; font-size:10px; border-color:var(--accent); color:var(--accent);">Aktuell</button>
+      </div>
+      <div class="form-group full">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label style="margin:0;" id="importTextLabel">Radtraining-Plan</label>
+          <button class="btn btn-ghost" onclick="fillImportExample()" style="font-size:9px; padding:3px 10px;">Beispiel laden</button>
+        </div>
+        <textarea id="importText" style="min-height:180px; font-size:11px; line-height:1.9;"></textarea>
+      </div>
+      <div id="importPreview" style="display:none; margin-top:12px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeImport()">Abbrechen</button>
+      <button class="btn btn-ghost" onclick="previewImport()" style="border-color:var(--accent2); color:var(--accent2);">Vorschau</button>
+      <button class="btn btn-primary" onclick="confirmImport()">Importieren</button>
+    </div>
+  </div>
+</div>
+
+<!-- COACH EXPORT MODAL -->
+<div class="modal-overlay" id="coachExportOverlay" onclick="closeCoachExportOnOverlay(event)">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-header">
+      <div class="modal-title">📋 Coach Export</div>
+      <button class="modal-close" onclick="closeCoachExport()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:14px;">Exportiere den Wochenplan als Text für deinen Coach — inkl. Soll/Ist-Vergleich.</div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px; padding:10px 14px; background:var(--surface2); border:1px solid var(--border);">
+        <span style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap;">Woche</span>
+        <button onclick="coachExportWeekShift(-1)" class="btn btn-ghost" style="padding:3px 10px; font-size:11px;">←</button>
+        <span id="coachExportWeekLabel" style="font-family:'Syne',sans-serif; font-weight:600; font-size:12px; flex:1; text-align:center;"></span>
+        <button onclick="coachExportWeekShift(1)" class="btn btn-ghost" style="padding:3px 10px; font-size:11px;">→</button>
+        <button onclick="resetCoachExportWeek()" class="btn btn-ghost" style="padding:3px 10px; font-size:10px; border-color:var(--accent); color:var(--accent);">Aktuell</button>
+      </div>
+      <div style="background:var(--surface2); border:1px solid var(--border); padding:8px 14px; margin-bottom:14px;">
+        <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:6px;">Inhalt</div>
+        <label class="export-option-row"><input type="checkbox" id="exportOptRad" checked onchange="updateCoachExportPreview()"><span>🚴 Radtraining (Plan + FIT-Daten)</span></label>
+        <label class="export-option-row"><input type="checkbox" id="exportOptKraft" checked onchange="updateCoachExportPreview()"><span>💪 Krafttraining</span></label>
+        <label class="export-option-row"><input type="checkbox" id="exportOptPostNotes" checked onchange="updateCoachExportPreview()"><span>📝 Post-Training Notizen & RPE</span></label>
+        <label class="export-option-row"><input type="checkbox" id="exportOptCompliance" checked onchange="updateCoachExportPreview()"><span>📊 Soll/Ist Compliance</span></label>
+      </div>
+      <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:6px;">Vorschau</div>
+      <div class="export-preview-box" id="coachExportPreview">Lade Vorschau...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCoachExport()">Schließen</button>
+      <button class="btn btn-primary" onclick="copyCoachExport()">📋 Kopieren</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOVE TRAINING MODAL -->
+<div class="modal-overlay" id="moveOverlay" onclick="closeMoveOnOverlay(event)">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title" id="moveTitle">↔ Training verschieben</div>
+      <button class="modal-close" onclick="closeMove()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:8px;">Wähle den Zieltag für dieses Training:</div>
+      <div class="move-target-grid" id="moveTargetGrid"></div>
+      <div style="font-size:10px; color:var(--muted); margin-top:10px;">Bestehende Daten am Zieltag werden überschrieben.</div>
+    </div>
+  </div>
+</div>
+
+<!-- BACKUP MODAL -->
+<div class="modal-overlay" id="backupOverlay" onclick="closeBackupOnOverlay(event)">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title">💾 Backup & Restore</div>
+      <button class="modal-close" onclick="closeBackup()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:16px; line-height:1.6;">
+        Sichere alle Trainingsdaten, Einstellungen und Presets als JSON-Datei.
+        FIT-Rohdaten (sekundengenaue Records) werden nicht mitgesichert — nur die Summary-Daten.
+      </div>
+      <div style="display:flex; gap:10px; flex-direction:column;">
+        <button class="btn btn-primary" onclick="exportBackup()" style="text-align:center;">⬇ Backup herunterladen (.json)</button>
+        <div style="position:relative;">
+          <button class="btn btn-ghost" onclick="document.getElementById('backupFileInput').click()" style="width:100%; text-align:center; border-color:var(--accent2); color:var(--accent2);">⬆ Backup wiederherstellen</button>
+          <input type="file" id="backupFileInput" accept=".json" onchange="importBackup(event)" style="display:none;">
+        </div>
+      </div>
+      <div style="font-size:9px; color:var(--muted); margin-top:14px; padding:10px; background:var(--surface2); border:1px solid var(--border); line-height:1.6;">
+        <strong style="color:var(--orange);">Hinweis:</strong> Beim Wiederherstellen werden alle aktuellen Daten überschrieben. Die App erstellt automatisch einen Sicherungspunkt, den du mit Undo rückgängig machen kannst.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let currentWeekOffset = 0;
+let weekData = {};
+let currentEditKey = null;
+let currentFitData = null;
+let currentFitRaw = null;
+let presets = [];
+let phaseAnnotations = {}; // weekKey -> phase name
+let statsFilterWeeks = 'all';
+
+// ============================================================
+// UNDO SYSTEM
+// ============================================================
+let undoStack = []; // max 10 snapshots
+const UNDO_MAX = 10;
+
+function pushUndo(label) {
+  undoStack.push({
+    label,
+    weekData: JSON.parse(JSON.stringify(weekData)),
+    phaseAnnotations: JSON.parse(JSON.stringify(phaseAnnotations)),
+    ts: Date.now()
+  });
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+}
+
+function performUndo() {
+  if (undoStack.length === 0) return;
+  const snap = undoStack.pop();
+  weekData = snap.weekData;
+  phaseAnnotations = snap.phaseAnnotations;
+  saveToStorage();
+  renderWeek();
+  showToast('Rückgängig: ' + snap.label);
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function getWeekDays(offset = 0) {
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - day + 1 + offset * 7);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+function dateKey(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function weekKey(offset) {
+  const days = getWeekDays(offset);
+  return dateKey(days[0]);
+}
+
+function getWeekData() {
+  const k = weekKey(currentWeekOffset);
+  if (!weekData[k]) weekData[k] = {};
+  return weekData[k];
+}
+
+function getDayNames() {
+  return ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+}
+
+function formatDate(d) {
+  return d.getDate() + '.' + (d.getMonth()+1) + '.';
+}
+
+function isToday(d) {
+  const t = new Date();
+  return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
+}
+
+function badgeClass(type) {
+  const map = { zone2:'badge-zone2', recovery:'badge-recovery', stimulus:'badge-stimulus', long:'badge-long', free:'badge-free' };
+  return map[type] || 'badge-other';
+}
+
+function typeLabel(type) {
+  const map = { zone2:'Zone 2', recovery:'Recovery', stimulus:'Stimulus', long:'Long Ride', free:'Frei', other:'Sonstiges' };
+  return map[type] || type;
+}
+
+function showToast(msg, undoLabel) {
+  const t = document.getElementById('toast');
+  if (undoLabel) {
+    t.innerHTML = msg + ` <button class="toast-undo" onclick="performUndo()">↩ Undo</button>`;
+  } else {
+    t.textContent = msg;
+  }
+  t.classList.add('show');
+  clearTimeout(window._toastTimeout);
+  window._toastTimeout = setTimeout(() => t.classList.remove('show'), undoLabel ? 5000 : 2500);
+}
+
+// ============================================================
+// RENDER WEEK
+// ============================================================
+function renderWeek() {
+  const days = getWeekDays(currentWeekOffset);
+  const data = getWeekData();
+  const dayNames = getDayNames();
+  const grid = document.getElementById('weekGrid');
+  const ftp = settings.ftp;
+  const today = new Date();
+
+  const first = days[0], last = days[6];
+  document.getElementById('weekLabel').textContent =
+    formatDate(first) + ' – ' + formatDate(last) + ' ' + last.getFullYear();
+
+  // ---- WEEKLY SUMMARY ----
+  let totalTss = 0, totalDurationMin = 0, fitCount = 0, planCount = 0, missingFitCount = 0;
+  let compliancePoints = 0, complianceMax = 0;
+
+  days.forEach(d => {
+    const key = dateKey(d);
+    const entry = data[key];
+    if (!entry || entry.type === 'free') return;
+    planCount++;
+    const dur = parseFloat(entry.duration) || 0;
+    totalDurationMin += dur;
+
+    // FIT data (in-memory or persisted summary)
+    const fit = entry.fitData || entry.fitSummary;
+    if (fit) {
+      fitCount++;
+      if (fit.tss) totalTss += fit.tss;
+      else if (fit.np && ftp && fit.totalTime) totalTss += calcTSS(fit.np, ftp, fit.totalTime);
+    } else if (entry._hasFit && entry.fitSummary) {
+      fitCount++;
+      const fs = entry.fitSummary;
+      if (fs.tss) totalTss += fs.tss;
+      else if (fs.np && ftp && fs.totalTime) totalTss += calcTSS(fs.np, ftp, fs.totalTime);
+    } else {
+      const dayDate = new Date(d); dayDate.setHours(23,59,59);
+      if (dayDate < today) missingFitCount++;
+    }
+
+    // Compliance calculation
+    if (entry.durationActual && entry.duration) {
+      complianceMax++;
+      const planned = parseFloat(entry.duration) || 0;
+      const actual = parseFloat(entry.durationActual) || 0;
+      if (planned > 0) {
+        const ratio = Math.min(actual / planned, 1.2);
+        compliancePoints += Math.min(ratio, 1) * 100;
+      }
+    }
+  });
+
+  const compliancePct = complianceMax > 0 ? Math.round(compliancePoints / complianceMax) : null;
+  const complianceColor = compliancePct === null ? 'var(--muted)' : compliancePct >= 90 ? 'var(--accent2)' : compliancePct >= 70 ? 'var(--accent)' : 'var(--orange)';
+
+  const wk = weekKey(currentWeekOffset);
+  const phase = phaseAnnotations[wk];
+  const phaseHtml = phase ? `<span class="phase-badge phase-${phase}">${phaseLabel(phase)}</span>` : '';
+
+  const summaryEl = document.getElementById('weekSummary');
+  summaryEl.innerHTML = `
+    <div class="week-summary-cell">
+      <div class="week-summary-label">TSS Woche</div>
+      <div class="week-summary-val" style="color:var(--accent)">${totalTss ? Math.round(totalTss) : '—'}</div>
+      <div class="week-summary-sub">Training Stress Score</div>
+    </div>
+    <div class="week-summary-cell">
+      <div class="week-summary-label">Geplante Dauer</div>
+      <div class="week-summary-val" style="color:var(--text)">${totalDurationMin ? Math.round(totalDurationMin/60*10)/10 + 'h' : '—'}</div>
+      <div class="week-summary-sub">${totalDurationMin} min gesamt</div>
+    </div>
+    <div class="week-summary-cell">
+      <div class="week-summary-label">FIT-Dateien</div>
+      <div class="week-summary-val" style="color:${fitCount > 0 ? 'var(--accent2)' : 'var(--muted)'}">${fitCount} / ${planCount}</div>
+      <div class="week-summary-sub">Einheiten erfasst</div>
+    </div>
+    <div class="week-summary-cell">
+      <div class="week-summary-label">Compliance</div>
+      <div class="week-summary-val" style="color:${complianceColor}">${compliancePct !== null ? compliancePct + '%' : '—'}</div>
+      <div class="week-summary-sub">${compliancePct !== null ? (complianceMax + ' Einheiten bewertet') : 'noch keine Ist-Daten'}</div>
+      ${compliancePct !== null ? `<div class="compliance-bar-wrap"><div class="compliance-bar" style="width:${compliancePct}%; background:${complianceColor};"></div></div>` : ''}
+    </div>
+    <div class="week-summary-cell">
+      <div class="week-summary-label">KW ${getISOWeek(first)}</div>
+      <div class="week-summary-val" style="color:var(--text2); font-size:16px;">${first.getFullYear()}</div>
+      <div class="week-summary-sub">${phaseHtml}${missingFitCount > 0 ? `<span style="color:var(--orange); font-size:9px;"> · ${missingFitCount} FIT fehlt</span>` : ''}</div>
+    </div>
+    <div class="week-summary-actions">
+      <button class="btn btn-ghost" onclick="copyWeekToNext()" style="padding:5px 12px; font-size:10px; white-space:nowrap;">⧉ Woche kopieren</button>
+    </div>
+  `;
+
+  // ---- DAY BLOCKS ----
+  grid.innerHTML = '';
+  days.forEach((d, i) => {
+    const key = dateKey(d);
+    const entry = data[key];
+    const isToday_ = isToday(d);
+    const isPast = new Date(d).setHours(23,59,59) < today;
+    const hasFitData = entry?.fitData || entry?.fitSummary;
+    const missingFit = entry && entry.type !== 'free' && !hasFitData && isPast;
+
+    const block = document.createElement('div');
+    block.className = 'week-day-block'
+      + (isToday_ ? ' is-today' : '')
+      + (hasFitData ? ' has-fit' : '');
+
+    // Left label
+    const label = document.createElement('div');
+    label.className = 'week-day-label';
+    label.innerHTML = `
+      <div class="week-day-name">${dayNames[i]}</div>
+      <div class="week-day-date">${formatDate(d)}</div>
+      ${isToday_ ? '<div class="today-pill">HEUTE</div>' : ''}
+    `;
+
+    // Right content
+    const content = document.createElement('div');
+    content.className = 'week-day-content';
+
+    // RAD section
+    const radSection = document.createElement('div');
+    radSection.className = 'day-rad';
+    radSection.onclick = () => openModal(key, d, dayNames[i]);
+
+    let radHtml = `<div class="day-section-label label-rad">🚴 Radtraining</div>`;
+
+    if (entry && entry.type !== 'free') {
+      radHtml += `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span class="training-type-badge ${badgeClass(entry.type)}">${typeLabel(entry.type)}</span>
+        ${entry.duration ? `<span class="plan-stat"><span>Dauer</span> <span class="plan-stat-val">${entry.duration} min</span></span>` : ''}
+        ${entry.watt ? `<span class="plan-stat"><span>Watt</span> <span class="plan-stat-val">${entry.watt}</span></span>` : ''}
+        ${entry.hr ? `<span class="plan-stat"><span>Puls</span> <span class="plan-stat-val">${entry.hr}</span></span>` : ''}
+        ${entry.rpe ? `<span class="plan-stat"><span>RPE</span> <span class="plan-stat-val">${entry.rpe}</span></span>` : ''}
+        ${entry.intervals ? `<span class="plan-stat"><span>Intervalle</span> <span class="plan-stat-val">${entry.intervals}</span></span>` : ''}
+      </div>`;
+      if (entry.notes) radHtml += `<div class="plan-notes">${entry.notes}</div>`;
+
+      const fit = entry.fitData || entry.fitSummary;
+      if (fit) {
+        radHtml += `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:2px;">
+          <div class="upload-indicator" style="margin-top:0; flex-shrink:0;">
+            <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="none" stroke="#4ea8de" stroke-width="1.5"/><circle cx="5" cy="5" r="1.5" fill="#4ea8de"/></svg>
+            FIT · ${fit.avgPower ? Math.round(fit.avgPower)+'W' : ''} ${fit.avgHr ? '· '+Math.round(fit.avgHr)+' bpm' : ''} ${fit.totalTime ? '· '+Math.round(fit.totalTime/60)+'min' : ''}
+          </div>
+          ${entry.fitData ? `<button class="fit-analysis-btn" style="margin-top:0; width:auto; padding:5px 12px;" onclick="event.stopPropagation(); openDayAnalysis('${key}')">📊 Auswertung</button>` : ''}
+        </div>`;
+      } else if (entry._hasFit) {
+        radHtml += `<div class="fit-was-loaded-hint">📊 FIT-Summary gespeichert (Records nach Neuladen nicht verfügbar)</div>`;
+      } else if (missingFit) {
+        radHtml += `<div class="fit-missing-hint">⚠ FIT-Datei fehlt noch</div>`;
+      }
+
+      // Post-training notes preview
+      if (entry.postNotes || entry.rpeActual || entry.durationActual) {
+        radHtml += `<div style="margin-top:4px; padding:6px 8px; background:rgba(200,241,53,0.04); border-left:2px solid var(--accent); font-size:10px; color:var(--text2);">`;
+        if (entry.rpeActual) radHtml += `<span style="color:var(--accent);">RPE ${entry.rpeActual}</span>`;
+        if (entry.durationActual) radHtml += `${entry.rpeActual ? ' · ' : ''}<span>${entry.durationActual} min tatsächlich</span>`;
+        if (entry.postNotes) radHtml += `${(entry.rpeActual || entry.durationActual) ? '<br>' : ''}<span style="font-style:italic; color:var(--muted);">${entry.postNotes.substring(0,80)}${entry.postNotes.length>80?'…':''}</span>`;
+        radHtml += `</div>`;
+      }
+
+    } else if (entry && entry.type === 'free') {
+      radHtml += `<div style="color:var(--muted); font-size:11px; font-style:italic;">🛌 Ruhetag${entry.notes ? ' – ' + entry.notes : ''}</div>`;
+    } else {
+      radHtml += `<div class="empty-day" style="height:30px; font-size:10px; justify-content:flex-start; color:var(--muted);">+ Training hinzufügen</div>`;
+    }
+    radSection.innerHTML = radHtml;
+
+    // KRAFT section
+    const kraftSection = document.createElement('div');
+    const hasKraft = !!entry?.kraft;
+    kraftSection.className = 'day-kraft';
+
+    const kraftHeader = document.createElement('div');
+    kraftHeader.className = 'day-kraft-header';
+    kraftHeader.innerHTML = `
+      <div class="day-section-label label-kraft" style="margin:0;">💪 Krafttraining${hasKraft ? '' : ' <span style="color:var(--border);font-size:9px;margin-left:4px;">— leer</span>'}</div>
+      <span class="kraft-toggle-icon">▼</span>
+    `;
+    kraftHeader.onclick = (e) => {
+      e.stopPropagation();
+      kraftSection.classList.toggle('is-open');
+    };
+
+    const kraftBody = document.createElement('div');
+    kraftBody.className = 'day-kraft-body';
+
+    if (hasKraft) {
+      kraftBody.innerHTML = renderKraftPreview(entry.kraft)
+        + `<button onclick="event.stopPropagation(); openKraftModal('${key}', new Date('${dateKey(d)}'), '${dayNames[i]}')"
+            style="margin-top:6px; background:none; border:1px solid var(--border); color:var(--text2); padding:5px 10px; font-size:10px; cursor:pointer; font-family:'DM Mono',monospace; text-align:left; transition:border-color 0.15s;"
+            onmouseover="this.style.borderColor='var(--purple)'; this.style.color='var(--purple)'"
+            onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text2)'">✏ Bearbeiten</button>`;
+    } else {
+      kraftBody.innerHTML = `<div class="day-kraft-empty">Noch kein Krafttraining eingetragen.</div>
+        <button onclick="event.stopPropagation(); openKraftModal('${key}', new Date('${dateKey(d)}'), '${dayNames[i]}')"
+          style="margin-top:4px; background:none; border:1px dashed rgba(155,114,207,0.3); color:rgba(155,114,207,0.5); padding:6px 12px; font-size:10px; cursor:pointer; font-family:'DM Mono',monospace; transition:all 0.15s;"
+          onmouseover="this.style.borderColor='var(--purple)'; this.style.color='var(--purple)'"
+          onmouseout="this.style.borderColor='rgba(155,114,207,0.3)'; this.style.color='rgba(155,114,207,0.5)'">+ Hinzufügen</button>`;
+    }
+
+    kraftSection.appendChild(kraftHeader);
+    kraftSection.appendChild(kraftBody);
+    content.appendChild(radSection);
+    content.appendChild(kraftSection);
+    block.appendChild(label);
+    block.appendChild(content);
+    grid.appendChild(block);
+  });
+}
+
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function changeWeek(dir) {
+  currentWeekOffset += dir;
+  document.getElementById('todayBtn').style.display = currentWeekOffset !== 0 ? 'block' : 'none';
+  renderWeek();
+}
+
+function goToToday() {
+  currentWeekOffset = 0;
+  document.getElementById('todayBtn').style.display = 'none';
+  renderWeek();
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function openModal(key, dateObj, dayName) {
+  currentEditKey = key;
+  currentFitData = null;
+  currentFitRaw = null;
+
+  const data = getWeekData();
+  const entry = data[key];
+
+  document.getElementById('modalTitle').textContent = dayName + ', ' + formatDate(dateObj) + ' – Training';
+  document.getElementById('deleteBtn').style.display = entry ? 'block' : 'none';
+  document.getElementById('moveBtn').style.display = (entry && entry.type) ? 'block' : 'none';
+
+  // Fill form
+  document.getElementById('trainType').value = entry?.type || 'zone2';
+  document.getElementById('trainDuration').value = entry?.duration || '';
+  document.getElementById('trainWatt').value = entry?.watt || '';
+  document.getElementById('trainHr').value = entry?.hr || '';
+  document.getElementById('trainRpe').value = entry?.rpe || '';
+  document.getElementById('trainIntervals').value = entry?.intervals || '';
+  document.getElementById('trainNotes').value = entry?.notes || '';
+  document.getElementById('trainRpeActual').value = entry?.rpeActual || '';
+  document.getElementById('trainDurationActual').value = entry?.durationActual || '';
+  document.getElementById('trainPostNotes').value = entry?.postNotes || '';
+
+  renderRpeButtons(entry?.rpeActual || '');
+  populatePresetDropdown();
+
+  // FIT display
+  if (entry?.fitData) {
+    currentFitData = entry.fitData;
+    document.getElementById('fitUploadedInfo').style.display = 'flex';
+    document.getElementById('fitFileName').textContent = entry.fitFileName || 'FIT-Datei geladen';
+    document.getElementById('fitDropZone').style.display = 'none';
+  } else {
+    document.getElementById('fitUploadedInfo').style.display = 'none';
+    document.getElementById('fitDropZone').style.display = 'block';
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function populatePresetDropdown() {
+  const sel = document.getElementById('presetQuickLoad');
+  sel.innerHTML = '<option value="">— Preset laden —</option>';
+  presets.forEach((p, i) => {
+    sel.innerHTML += `<option value="${i}">${p.name} (${typeLabel(p.type)}, ${p.duration || '?'} min)</option>`;
+  });
+}
+
+function loadPresetQuick() {
+  const sel = document.getElementById('presetQuickLoad');
+  const idx = parseInt(sel.value);
+  if (isNaN(idx) || !presets[idx]) return;
+  const p = presets[idx];
+  document.getElementById('trainType').value = p.type || 'zone2';
+  document.getElementById('trainDuration').value = p.duration || '';
+  document.getElementById('trainWatt').value = p.watt || '';
+  document.getElementById('trainHr').value = p.hr || '';
+  document.getElementById('trainRpe').value = p.rpe || '';
+  document.getElementById('trainIntervals').value = p.intervals || '';
+  document.getElementById('trainNotes').value = p.notes || '';
+  sel.value = '';
+  showToast('Preset "' + p.name + '" geladen');
+}
+
+function saveAsPreset() {
+  const name = prompt('Preset-Name:');
+  if (!name) return;
+  presets.push({
+    name,
+    type: document.getElementById('trainType').value,
+    duration: document.getElementById('trainDuration').value.trim(),
+    watt: document.getElementById('trainWatt').value.trim(),
+    hr: document.getElementById('trainHr').value.trim(),
+    rpe: document.getElementById('trainRpe').value.trim(),
+    intervals: document.getElementById('trainIntervals').value.trim(),
+    notes: document.getElementById('trainNotes').value.trim(),
+  });
+  savePresetsToStorage();
+  populatePresetDropdown();
+  showToast('Preset "' + name + '" gespeichert ✓');
+}
+
+function renderRpeButtons(selected) {
+  const container = document.getElementById('rpeActualBtns');
+  container.innerHTML = '';
+  for (let i = 1; i <= 10; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'rpe-btn' + (String(i) === String(selected) ? ' selected' : '');
+    btn.textContent = i;
+    btn.onclick = () => {
+      document.getElementById('trainRpeActual').value = i;
+      document.querySelectorAll('.rpe-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    container.appendChild(btn);
+  }
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  currentEditKey = null;
+  document.getElementById('fitFileInput').value = '';
+}
+
+function closeModalOnOverlay(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function saveDay() {
+  const key = currentEditKey;
+  if (!key) return;
+  pushUndo('Training bearbeiten');
+  const data = getWeekData();
+
+  const entry = {
+    type: document.getElementById('trainType').value,
+    duration: document.getElementById('trainDuration').value.trim(),
+    watt: document.getElementById('trainWatt').value.trim(),
+    hr: document.getElementById('trainHr').value.trim(),
+    rpe: document.getElementById('trainRpe').value.trim(),
+    intervals: document.getElementById('trainIntervals').value.trim(),
+    notes: document.getElementById('trainNotes').value.trim(),
+    rpeActual: document.getElementById('trainRpeActual').value,
+    durationActual: document.getElementById('trainDurationActual').value.trim(),
+    postNotes: document.getElementById('trainPostNotes').value.trim(),
+  };
+
+  // keep existing kraft
+  if (data[key]?.kraft) entry.kraft = data[key].kraft;
+
+  // keep existing fit data
+  if (currentFitData) {
+    entry.fitData = currentFitData;
+    entry.fitFileName = data[key]?.fitFileName || 'FIT-Datei';
+  } else if (data[key]?.fitData) {
+    entry.fitData = data[key].fitData;
+    entry.fitFileName = data[key].fitFileName;
+  }
+  // keep fitSummary if exists
+  if (data[key]?.fitSummary) entry.fitSummary = data[key].fitSummary;
+  if (data[key]?._hasFit) entry._hasFit = data[key]._hasFit;
+
+  if (window._pendingFitData) {
+    entry.fitData = window._pendingFitData;
+    entry.fitFileName = window._pendingFitFileName;
+    // Also store the summary for persistence
+    entry.fitSummary = extractFitSummary(window._pendingFitData);
+    entry._hasFit = true;
+    window._pendingFitData = null;
+    window._pendingFitFileName = null;
+  }
+
+  data[key] = entry;
+  saveToStorage();
+  renderWeek();
+  closeModal();
+  showToast('Training gespeichert ✓', 'Training bearbeiten');
+}
+
+function extractFitSummary(fitData) {
+  // Extract only the small summary fields, not the large records arrays
+  return {
+    avgPower: fitData.avgPower,
+    maxPower: fitData.maxPower,
+    normalizedPower: fitData.normalizedPower || fitData.np,
+    np: fitData.normalizedPower || fitData.np,
+    avgHr: fitData.avgHr,
+    maxHr: fitData.maxHr,
+    avgCadence: fitData.avgCadence,
+    totalDistance: fitData.totalDistance,
+    totalTime: fitData.totalTime,
+    calories: fitData.calories,
+    tss: fitData.tss || null,
+  };
+}
+
+function deleteRadOnly() {
+  const key = currentEditKey;
+  if (!key) return;
+  pushUndo('Radtraining löschen');
+  const data = getWeekData();
+  if (data[key]) {
+    const kraft = data[key].kraft;
+    if (kraft) {
+      data[key] = { kraft };
+    } else {
+      delete data[key];
+    }
+  }
+  saveToStorage();
+  renderWeek();
+  closeModal();
+  showToast('Radtraining gelöscht', 'Radtraining löschen');
+}
+
+function openDayAnalysis(key) {
+  let entry = null;
+  for (const wk in weekData) {
+    if (weekData[wk][key]) { entry = weekData[wk][key]; break; }
+  }
+  if (!entry || !entry.fitData) return;
+  showAnalysis(entry.fitData, entry, entry.fitFileName || 'Training');
+  document.getElementById('analysisOverlay').classList.add('open');
+  document.getElementById('analysisOverlay').scrollTop = 0;
+}
+
+function closeAnalysis() {
+  document.getElementById('analysisOverlay').classList.remove('open');
+}
+
+function closeAnalysisOnOverlay(e) {
+  if (e.target === document.getElementById('analysisOverlay')) closeAnalysis();
+}
+
+function removeFit() {
+  currentFitData = null;
+  const key = currentEditKey;
+  const data = getWeekData();
+  if (data[key]) { delete data[key].fitData; delete data[key].fitFileName; delete data[key].fitSummary; delete data[key]._hasFit; }
+  document.getElementById('fitUploadedInfo').style.display = 'none';
+  document.getElementById('fitDropZone').style.display = 'block';
+  window._pendingFitData = null;
+}
+
+// ============================================================
+// MOVE TRAINING
+// ============================================================
+function openMoveTraining() {
+  if (!currentEditKey) return;
+  closeModal();
+  const days = getWeekDays(currentWeekOffset);
+  const dayNames = getDayNames();
+  const grid = document.getElementById('moveTargetGrid');
+  grid.innerHTML = '';
+
+  document.getElementById('moveTitle').textContent = '↔ Training verschieben';
+
+  days.forEach((d, i) => {
+    const key = dateKey(d);
+    const isSource = key === currentEditKey;
+    const btn = document.createElement('div');
+    btn.className = 'move-target-btn' + (isSource ? ' is-source' : '');
+    btn.innerHTML = `<div class="move-day-name">${dayNames[i]}</div><div class="move-day-date">${formatDate(d)}</div>`;
+    if (!isSource) {
+      btn.onclick = () => executeMove(currentEditKey, key);
+    }
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('moveOverlay').classList.add('open');
+}
+
+function executeMove(fromKey, toKey) {
+  pushUndo('Training verschieben');
+  const data = getWeekData();
+  const source = data[fromKey];
+  if (!source) return;
+
+  // Move all rad fields (keep kraft at source)
+  const radFields = ['type','duration','watt','hr','rpe','intervals','notes','rpeActual','durationActual','postNotes','fitData','fitFileName','fitSummary','_hasFit'];
+  const moved = {};
+  radFields.forEach(f => { if (source[f] !== undefined) moved[f] = source[f]; });
+
+  // Remove from source
+  const kraftAtSource = source.kraft;
+  if (kraftAtSource) {
+    data[fromKey] = { kraft: kraftAtSource };
+  } else {
+    delete data[fromKey];
+  }
+
+  // Put at target (keep existing kraft at target)
+  if (!data[toKey]) data[toKey] = {};
+  const kraftAtTarget = data[toKey].kraft;
+  Object.assign(data[toKey], moved);
+  if (kraftAtTarget) data[toKey].kraft = kraftAtTarget;
+
+  saveToStorage();
+  renderWeek();
+  closeMove();
+  showToast('Training verschoben ✓', 'Training verschieben');
+}
+
+function closeMove() {
+  document.getElementById('moveOverlay').classList.remove('open');
+}
+
+function closeMoveOnOverlay(e) {
+  if (e.target === document.getElementById('moveOverlay')) closeMove();
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchMainTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'stats') renderStatsTab();
+}
+
+// ============================================================
+// STORAGE — FIT SUMMARY NOW PERSISTED
+// ============================================================
+function saveToStorage() {
+  const toStore = {};
+  for (const wk in weekData) {
+    toStore[wk] = {};
+    for (const dk in weekData[wk]) {
+      const entry = { ...weekData[wk][dk] };
+      // Persist fitSummary (small), but not fitData.records (large)
+      if (entry.fitData) {
+        if (!entry.fitSummary) {
+          entry.fitSummary = extractFitSummary(entry.fitData);
+        }
+        entry._hasFit = true;
+        delete entry.fitData; // don't stringify large binary data
+      }
+      delete entry.fitFileName; // fileName not needed in storage
+      toStore[wk][dk] = entry;
+    }
+  }
+  try { localStorage.setItem('cyclingTrainer_plan', JSON.stringify(toStore)); } catch(e) { console.warn('Storage save failed:', e); }
+  try { localStorage.setItem('cyclingTrainer_phases', JSON.stringify(phaseAnnotations)); } catch(e) {}
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem('cyclingTrainer_plan');
+    if (raw) weekData = JSON.parse(raw);
+  } catch(e) {}
+  try {
+    const phases = localStorage.getItem('cyclingTrainer_phases');
+    if (phases) phaseAnnotations = JSON.parse(phases);
+  } catch(e) {}
+  loadSettings();
+  loadPresetsFromStorage();
+}
+
+// ============================================================
+// FIT FILE PARSER — robust v2 with developer fields, CRC skip,
+// proper compressed timestamps, and safe position advancement
+// ============================================================
+async function parseFitFile(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const dv = new DataView(buffer);
+  const result = { records: [], laps: [], summary: {} };
+
+  if (bytes.length < 14) throw new Error('Datei zu klein');
+
+  // --- HEADER ---
+  const headerSize = bytes[0];
+  if (headerSize < 12) throw new Error('Ungültiger Header');
+
+  // Check .FIT signature
+  const sig = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
+  if (sig !== '.FIT') throw new Error('Keine gültige FIT-Datei (Signatur: ' + sig + ')');
+
+  // Data size from header (little-endian u32 at offset 4)
+  const dataSize = dv.getUint32(4, true);
+  const dataEnd = headerSize + dataSize; // CRC follows after this
+
+  const data = {
+    timestamps: [], power: [], heartRate: [], cadence: [],
+    speed: [], altitude: [], distance: [],
+    lapPower: [], lapHr: [], lapTime: [],
+  };
+
+  let pos = headerSize;
+  const definitions = {}; // keyed by local message type (0–15)
+
+  // FIT global message numbers we care about
+  const MSG_RECORD = 20, MSG_LAP = 19, MSG_SESSION = 18;
+
+  // Field IDs for record messages
+  const REC = { TIMESTAMP: 253, HR: 3, CADENCE: 4, DISTANCE: 5, SPEED: 6, POWER: 7, ALTITUDE: 2 };
+
+  // Helper: read unsigned int from bytes (little or big endian)
+  function readUint(offset, size, littleEndian) {
+    if (offset + size > bytes.length) return undefined;
+    try {
+      if (size === 1) return bytes[offset];
+      if (size === 2) return dv.getUint16(offset, littleEndian);
+      if (size === 4) return dv.getUint32(offset, littleEndian);
+      // For sizes > 4 or odd sizes, read first 4 bytes or first byte
+      if (size > 4) return dv.getUint32(offset, littleEndian);
+      return bytes[offset];
+    } catch(e) { return undefined; }
+  }
+
+  function readSint(offset, size, littleEndian) {
+    if (offset + size > bytes.length) return undefined;
+    try {
+      if (size === 1) return dv.getInt8(offset);
+      if (size === 2) return dv.getInt16(offset, littleEndian);
+      if (size === 4) return dv.getInt32(offset, littleEndian);
+      return dv.getInt32(offset, littleEndian);
+    } catch(e) { return undefined; }
+  }
+
+  // Determine if a base type is signed
+  function isSigned(baseType) {
+    const bt = baseType & 0x1F; // strip invalid flag bit 5
+    return bt === 1 || bt === 3 || bt === 5 || bt === 20; // sint8, sint16, sint32, sint64
+  }
+
+  let errorCount = 0;
+  const MAX_ERRORS = 50;
+
+  // --- MAIN PARSE LOOP ---
+  while (pos < dataEnd && pos < bytes.length - 1) {
+    if (errorCount > MAX_ERRORS) {
+      console.warn('FIT parser: too many errors, stopping at byte', pos);
+      break;
+    }
+
+    const recordHeader = bytes[pos];
+    pos++;
+
+    // --- COMPRESSED TIMESTAMP HEADER (bit 7 set) ---
+    if (recordHeader & 0x80) {
+      const localMsgType = (recordHeader >> 5) & 0x03;
+      const def = definitions[localMsgType];
+      if (!def) {
+        // Unknown definition for compressed timestamp — we can't know the size.
+        // Try to recover by scanning for next valid header, but safest is to skip.
+        errorCount++;
+        continue;
+      }
+      // Read fields just like a normal data message
+      const fieldValues = {};
+      let fieldPos = pos;
+      let ok = true;
+      for (const field of def.fields) {
+        if (fieldPos + field.size > bytes.length) { ok = false; break; }
+        const val = isSigned(field.baseType)
+          ? readSint(fieldPos, field.size, def.littleEndian)
+          : readUint(fieldPos, field.size, def.littleEndian);
+        fieldValues[field.fieldDef] = { val, size: field.size };
+        fieldPos += field.size;
+      }
+      // Skip dev fields too
+      fieldPos += def.devFieldsSize || 0;
+
+      if (ok) {
+        processDataMessage(def.globalMsgNum, fieldValues);
+      }
+      pos = fieldPos;
+      continue;
+    }
+
+    // --- NORMAL HEADER ---
+    const localMsgType = recordHeader & 0x0F;
+    const isDefinition = (recordHeader & 0x40) !== 0;
+    const hasDeveloperData = (recordHeader & 0x20) !== 0;
+
+    if (isDefinition) {
+      // --- DEFINITION MESSAGE ---
+      if (pos + 5 > bytes.length) break;
+
+      pos++; // reserved byte
+      const arch = bytes[pos++]; // 0 = little endian, 1 = big endian
+      const littleEndian = arch === 0;
+
+      const globalMsgNum = readUint(pos, 2, littleEndian);
+      pos += 2;
+
+      const numFields = bytes[pos++];
+
+      const fields = [];
+      let totalFieldSize = 0;
+      for (let f = 0; f < numFields; f++) {
+        if (pos + 3 > bytes.length) break;
+        const fieldDef = bytes[pos++];
+        const size = bytes[pos++];
+        const baseType = bytes[pos++];
+        fields.push({ fieldDef, size, baseType });
+        totalFieldSize += size;
+      }
+
+      // Developer fields (FIT v2.0+) — must be parsed to know total message size
+      let devFieldsSize = 0;
+      if (hasDeveloperData) {
+        if (pos < bytes.length) {
+          const numDevFields = bytes[pos++];
+          for (let df = 0; df < numDevFields; df++) {
+            if (pos + 3 > bytes.length) break;
+            const devFieldNum = bytes[pos++];
+            const devSize = bytes[pos++];
+            const devIdx = bytes[pos++];
+            devFieldsSize += devSize;
+          }
+        }
+      }
+
+      definitions[localMsgType] = {
+        globalMsgNum,
+        fields,
+        totalFieldSize,
+        devFieldsSize,
+        littleEndian,
+        arch
+      };
+
+    } else {
+      // --- DATA MESSAGE ---
+      const def = definitions[localMsgType];
+      if (!def) {
+        // No definition for this local message type — can't parse.
+        // This is a real problem since we don't know the message size.
+        errorCount++;
+        continue;
+      }
+
+      const fieldValues = {};
+      let fieldPos = pos;
+      let ok = true;
+
+      for (const field of def.fields) {
+        if (fieldPos + field.size > bytes.length) { ok = false; break; }
+        const val = isSigned(field.baseType)
+          ? readSint(fieldPos, field.size, def.littleEndian)
+          : readUint(fieldPos, field.size, def.littleEndian);
+        fieldValues[field.fieldDef] = { val, size: field.size };
+        fieldPos += field.size;
+      }
+
+      // Skip developer fields
+      fieldPos += def.devFieldsSize || 0;
+
+      // Safety: don't go backwards
+      if (fieldPos <= pos) {
+        errorCount++;
+        pos++;
+        continue;
+      }
+
+      pos = fieldPos;
+
+      if (ok) {
+        processDataMessage(def.globalMsgNum, fieldValues);
+      }
+    }
+  }
+
+  // --- PROCESS INDIVIDUAL DATA MESSAGES ---
+  function processDataMessage(globalMsg, fieldValues) {
+    if (globalMsg === MSG_RECORD) {
+      const ts = fieldValues[REC.TIMESTAMP];
+      const power = fieldValues[REC.POWER];
+      const hr = fieldValues[REC.HR];
+      const cad = fieldValues[REC.CADENCE];
+      const speed = fieldValues[REC.SPEED];
+      const alt = fieldValues[REC.ALTITUDE];
+      const dist = fieldValues[REC.DISTANCE];
+
+      if (ts && ts.val > 0 && ts.val < 0xFFFFFFFE) data.timestamps.push(ts.val);
+      if (power && power.val >= 0 && power.val < 3000 && power.val !== 0xFFFF) data.power.push(power.val);
+      if (hr && hr.val > 30 && hr.val < 250 && hr.val !== 0xFF) data.heartRate.push(hr.val);
+      if (cad && cad.val >= 0 && cad.val < 255 && cad.val !== 0xFF) data.cadence.push(cad.val);
+      if (speed && speed.val > 0 && speed.val < 0xFFFF) data.speed.push(speed.val / 1000 * 3.6);
+      if (alt) {
+        const altVal = alt.size === 2 ? alt.val : alt.val;
+        if (altVal > 0 && altVal < 0xFFFF) data.altitude.push(altVal / 5 - 500);
+      }
+      if (dist && dist.val > 0 && dist.val < 0xFFFFFFFE) data.distance.push(dist.val / 100);
+
+    } else if (globalMsg === MSG_LAP) {
+      const lapPwr = fieldValues[19];
+      const lapHr = fieldValues[16];
+      const lapT = fieldValues[7];
+      if (lapPwr && lapPwr.val > 0 && lapPwr.val < 2000) data.lapPower.push(lapPwr.val);
+      if (lapHr && lapHr.val > 30 && lapHr.val < 250) data.lapHr.push(lapHr.val);
+      if (lapT && lapT.val > 0 && lapT.val < 0xFFFFFFFE) data.lapTime.push(lapT.val / 1000);
+
+    } else if (globalMsg === MSG_SESSION) {
+      const g = (id) => fieldValues[id];
+      const safeVal = (fv, max) => fv && fv.val > 0 && fv.val < max ? fv.val : null;
+
+      const td = safeVal(g(9), 0xFFFFFFFE);  if (td) result.summary.totalDistance = td / 100;
+      const tt = safeVal(g(7), 0xFFFFFFFE);  if (tt) result.summary.totalTime = tt / 1000;
+      const ap = safeVal(g(20), 3000);        if (ap) result.summary.avgPower = ap;
+      const ah = safeVal(g(16), 250);         if (ah) result.summary.avgHr = ah;
+      const mp = safeVal(g(21), 5000);        if (mp) result.summary.maxPower = mp;
+      const mh = safeVal(g(17), 250);         if (mh) result.summary.maxHr = mh;
+      const ac = safeVal(g(18), 255);         if (ac) result.summary.avgCadence = ac;
+      const cal = safeVal(g(11), 0xFFFF);     if (cal) result.summary.calories = cal;
+      const np = safeVal(g(34), 3000);        if (np) result.summary.normalizedPower = np;
+
+      // Also check enhanced fields used by newer devices
+      const enhAvgSpeed = safeVal(g(124), 0xFFFFFFFE);
+      const totalAscent = safeVal(g(22), 0xFFFF);
+      if (totalAscent) result.summary.totalAscent = totalAscent;
+    }
+  }
+
+  // --- POST-PROCESSING: calculate from records if session data wasn't found ---
+  if (data.power.length > 0) {
+    const validPower = data.power.filter(p => p > 0);
+    if (!result.summary.avgPower && validPower.length > 0)
+      result.summary.avgPower = validPower.reduce((a,b) => a+b, 0) / validPower.length;
+    if (!result.summary.maxPower && validPower.length > 0)
+      result.summary.maxPower = Math.max(...validPower);
+
+    // NP: 30s rolling average, raised to 4th power
+    if (validPower.length >= 30) {
+      const rolling = [];
+      for (let i = 29; i < validPower.length; i++) {
+        let sum = 0;
+        for (let j = i - 29; j <= i; j++) sum += validPower[j];
+        rolling.push(sum / 30);
+      }
+      const np4avg = rolling.reduce((a,v) => a + Math.pow(v, 4), 0) / rolling.length;
+      const npVal = Math.pow(np4avg, 0.25);
+      if (!result.summary.normalizedPower && npVal > 0) result.summary.normalizedPower = npVal;
+    }
+  }
+
+  if (data.heartRate.length > 0) {
+    if (!result.summary.avgHr)
+      result.summary.avgHr = data.heartRate.reduce((a,b)=>a+b,0) / data.heartRate.length;
+    if (!result.summary.maxHr)
+      result.summary.maxHr = Math.max(...data.heartRate);
+  }
+
+  if (data.cadence.length > 0 && !result.summary.avgCadence)
+    result.summary.avgCadence = data.cadence.reduce((a,b)=>a+b,0) / data.cadence.length;
+
+  if (data.distance.length > 0 && !result.summary.totalDistance)
+    result.summary.totalDistance = Math.max(...data.distance);
+
+  if (data.timestamps.length > 1 && !result.summary.totalTime)
+    result.summary.totalTime = data.timestamps[data.timestamps.length-1] - data.timestamps[0];
+
+  // Safety: if we got records but no usable summary, flag it
+  const totalRecords = data.power.length + data.heartRate.length + data.cadence.length;
+  if (totalRecords === 0 && Object.keys(result.summary).length === 0) {
+    throw new Error('FIT-Datei konnte gelesen werden, aber enthält keine verwertbaren Trainingsdaten (' + bytes.length + ' Bytes, ' + errorCount + ' Parse-Fehler)');
+  }
+
+  console.log(`FIT parsed: ${data.power.length} power, ${data.heartRate.length} HR, ${data.cadence.length} cadence records. ${errorCount} errors.`);
+
+  result.records = data;
+  return result;
+}
+
+function calcTSS(np, ftp, durationSec) {
+  if (!np || !ftp || !durationSec) return null;
+  const IF = np / ftp;
+  return (durationSec * np * IF) / (ftp * 3600) * 100;
+}
+
+function calcZones(powerData, ftp) {
+  if (!powerData || powerData.length === 0 || !ftp) return null;
+  const zones = [0,0,0,0,0];
+  powerData.forEach(p => {
+    const pct = p / ftp;
+    if (pct < ZONE_PCT[1]) zones[0]++;
+    else if (pct < ZONE_PCT[2]) zones[1]++;
+    else if (pct < ZONE_PCT[3]) zones[2]++;
+    else if (pct < ZONE_PCT[4]) zones[3]++;
+    else zones[4]++;
+  });
+  const total = powerData.length;
+  return zones.map(z => Math.round(z/total*100));
+}
+
+// ============================================================
+// FIT UPLOAD HANDLERS
+// ============================================================
+async function handleFitUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('loadingOverlay').classList.add('visible');
+  try {
+    const buffer = await file.arrayBuffer();
+    const parsed = await parseFitFile(buffer);
+    window._pendingFitData = parsed.summary;
+    window._pendingFitData.records = {
+      power: parsed.records.power,
+      heartRate: parsed.records.heartRate,
+      cadence: parsed.records.cadence,
+      speed: parsed.records.speed,
+      altitude: parsed.records.altitude,
+    };
+    window._pendingFitFileName = file.name;
+
+    document.getElementById('fitUploadedInfo').style.display = 'flex';
+    document.getElementById('fitFileName').textContent = file.name;
+    document.getElementById('fitDropZone').style.display = 'none';
+
+    document.getElementById('loadingOverlay').classList.remove('visible');
+    showToast('FIT-Datei geladen ✓');
+  } catch(err) {
+    document.getElementById('loadingOverlay').classList.remove('visible');
+    console.error('FIT parse error:', err);
+    alert('Fehler beim Lesen der FIT-Datei:\n' + err.message + '\n\nBitte prüfe ob es eine gültige .fit Datei ist (Garmin/Wahoo/Zwift).');
+  }
+}
+
+// ============================================================
+// ANALYSIS RENDER
+// ============================================================
+function showAnalysis(fitData, plan, fileName) {
+  const ftp = settings.ftp;
+  const s = fitData;
+
+  const durationMin = s.totalTime ? s.totalTime / 60 : null;
+  const np = s.normalizedPower;
+  const tss = calcTSS(np, ftp, s.totalTime);
+  const ifVal = np && ftp ? np / ftp : null;
+  const zones = calcZones(s.records?.power, ftp);
+
+  const fmt = v => v != null ? Math.round(v) : '–';
+  const fmtF = (v, d=1) => v != null ? v.toFixed(d) : '–';
+  const fmtDist = v => v != null ? (v/1000).toFixed(1) + ' km' : '–';
+  const fmtTime = s => {
+    if (!s) return '–';
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = Math.floor(s%60);
+    return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
+  };
+
+  let compHtml = '';
+  if (plan) {
+    const parseRange = s => {
+      if (!s) return null;
+      const m = s.replace(/\s/g,'').match(/(\d+)[–\-~bis]+(\d+)/);
+      if (m) return { min: parseInt(m[1]), max: parseInt(m[2]), mid: (parseInt(m[1])+parseInt(m[2]))/2 };
+      const single = parseInt(s);
+      if (!isNaN(single)) return { min: single-10, max: single+10, mid: single };
+      return null;
+    };
+    const checkTarget = (actual, rangeStr) => {
+      const r = parseRange(rangeStr);
+      if (!actual || !r) return null;
+      if (actual >= r.min && actual <= r.max) return 'on';
+      if (actual > r.max) return 'above';
+      return 'below';
+    };
+    const wattStatus = checkTarget(s.avgPower, plan.watt);
+    const hrStatus = checkTarget(s.avgHr, plan.hr);
+    const durStatus = checkTarget(durationMin, plan.duration);
+    const statusIcon = st => st === 'on' ? '✓' : st === 'above' ? '↑' : '↓';
+    const statusClass = st => st === 'on' ? 'diff-plus' : 'diff-minus';
+
+    compHtml = `
+      <div class="comparison-grid">
+        <div class="comparison-card">
+          <div class="comparison-card-title">Plan vs. Ist</div>
+          ${plan.watt ? `<div class="comp-row"><span class="comp-key">Watt-Ziel</span><span class="comp-val">${plan.watt} <span class="comp-diff ${statusClass(wattStatus)}">${wattStatus ? statusIcon(wattStatus) + ' ' + fmt(s.avgPower) + 'W' : ''}</span></span></div>` : ''}
+          ${plan.hr ? `<div class="comp-row"><span class="comp-key">Puls-Ziel</span><span class="comp-val">${plan.hr} <span class="comp-diff ${statusClass(hrStatus)}">${hrStatus ? statusIcon(hrStatus) + ' ' + fmt(s.avgHr) + ' bpm' : ''}</span></span></div>` : ''}
+          ${plan.duration ? `<div class="comp-row"><span class="comp-key">Dauer-Ziel</span><span class="comp-val">${plan.duration} min <span class="comp-diff ${statusClass(durStatus)}">${durStatus ? statusIcon(durStatus) + ' ' + fmtF(durationMin,0) + ' min' : ''}</span></span></div>` : ''}
+          ${plan.intervals ? `<div class="comp-row"><span class="comp-key">Intervalle</span><span class="comp-val">${plan.intervals}</span></div>` : ''}
+          ${plan.notes ? `<div class="comp-row" style="flex-direction:column; gap:4px;"><span class="comp-key">Plan-Notiz</span><span style="color:var(--text2); font-size:10px; line-height:1.5;">${plan.notes}</span></div>` : ''}
+        </div>
+        <div class="comparison-card">
+          <div class="comparison-card-title">Leistungs-Ratio</div>
+          <div class="comp-row"><span class="comp-key">IF</span><span class="comp-val">${ifVal ? fmtF(ifVal, 2) : '–'}</span></div>
+          <div class="comp-row"><span class="comp-key">NP / Avg</span><span class="comp-val">${fmt(np)} / ${fmt(s.avgPower)} W</span></div>
+          <div class="comp-row"><span class="comp-key">TSS</span><span class="comp-val">${tss ? Math.round(tss) : '–'}</span></div>
+          <div class="comp-row"><span class="comp-key">Typ</span><span class="comp-val">${typeLabel(plan.type)}</span></div>
+        </div>
+      </div>`;
+  }
+
+  let zonesHtml = '';
+  if (zones && zones.some(z=>z>0)) {
+    zonesHtml = `
+      <div class="chart-area">
+        <div class="chart-title">Leistungszonen (% der Zeit) — FTP: ${ftp} W</div>
+        <div class="zone-breakdown">
+          ${[0,1,2,3,4].map(z => `
+            <div class="zone-bar-container">
+              <div class="zone-label" style="color:${ZONE_COLORS[z]};">Z${z+1}</div>
+              <div class="zone-bar-wrap">
+                <div class="zone-bar" style="height:${zones[z]}%; background:${ZONE_COLORS[z]};"></div>
+              </div>
+              <div class="zone-pct">${zones[z]}%</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }
+
+  const coachText = buildCoachText(s, plan, fitData, ftp, tss, ifVal, durationMin, fileName);
+
+  document.getElementById('analysisContent').innerHTML = `
+    <div class="analysis-header">
+      <div>
+        <div class="analysis-title">${fileName || 'Training'}</div>
+        <div class="analysis-subtitle">${plan ? typeLabel(plan.type) + ' · ' : ''}${s.totalTime ? fmtTime(s.totalTime) : ''} ${s.totalDistance ? '· ' + fmtDist(s.totalDistance) : ''}</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Ø Leistung</div><div class="stat-value" style="color:var(--accent)">${fmt(s.avgPower)}</div><div class="stat-unit">Watt</div>${plan?.watt ? `<div class="stat-target">Ziel: ${plan.watt} W</div>` : ''}</div>
+      <div class="stat-card"><div class="stat-label">Norm. Leistung</div><div class="stat-value" style="color:var(--accent2)">${fmt(np)}</div><div class="stat-unit">NP</div>${ifVal ? `<div class="stat-target">IF: ${fmtF(ifVal,2)}</div>` : ''}</div>
+      <div class="stat-card"><div class="stat-label">Ø HF</div><div class="stat-value" style="color:var(--red)">${fmt(s.avgHr)}</div><div class="stat-unit">bpm</div>${plan?.hr ? `<div class="stat-target">Ziel: ${plan.hr}</div>` : ''}</div>
+      <div class="stat-card"><div class="stat-label">Max HF</div><div class="stat-value" style="color:var(--orange)">${fmt(s.maxHr)}</div><div class="stat-unit">bpm</div></div>
+      <div class="stat-card"><div class="stat-label">Dauer</div><div class="stat-value" style="color:var(--blue)">${durationMin ? Math.round(durationMin) : '–'}</div><div class="stat-unit">min</div>${plan?.duration ? `<div class="stat-target">Ziel: ${plan.duration} min</div>` : ''}</div>
+      <div class="stat-card"><div class="stat-label">Distanz</div><div class="stat-value" style="color:var(--purple)">${s.totalDistance ? (s.totalDistance/1000).toFixed(1) : '–'}</div><div class="stat-unit">km</div></div>
+      <div class="stat-card"><div class="stat-label">TSS</div><div class="stat-value" style="color:var(--accent)">${tss ? Math.round(tss) : '–'}</div><div class="stat-unit">TSS</div></div>
+      <div class="stat-card"><div class="stat-label">Ø Kadenz</div><div class="stat-value">${fmt(s.avgCadence)}</div><div class="stat-unit">rpm</div></div>
+    </div>
+    ${compHtml}
+    ${zonesHtml}
+    <div class="coach-export"><div class="coach-export-header"><div class="coach-export-title">Coach-Bericht</div><button class="btn btn-ghost" onclick="copyCoachText()" style="padding:5px 12px; font-size:10px;">Kopieren</button></div><div class="coach-export-body" id="coachExportBody">${coachText}</div></div>
+  `;
+
+  window._currentCoachText = coachText.replace(/<[^>]+>/g,'');
+}
+
+function buildCoachText(s, plan, fitData, ftp, tss, ifVal, durationMin, fileName) {
+  const fmt = v => v != null ? Math.round(v) : '–';
+  const fmtF = (v,d=1) => v!=null ? v.toFixed(d) : '–';
+  const today = new Date().toLocaleDateString('de-AT', {day:'2-digit', month:'2-digit', year:'numeric'});
+
+  let lines = [];
+  lines.push(`<strong>Training: ${fileName || 'Einheit'}</strong>`);
+  lines.push(`<strong>Datum:</strong> ${today}`);
+  if (plan) lines.push(`<strong>Typ:</strong> ${typeLabel(plan.type)}`);
+  lines.push('');
+  lines.push('<strong>── STATS ──────────────────</strong>');
+  if (durationMin) lines.push(`Dauer:               ${Math.round(durationMin)} min${plan?.duration ? ' (Ziel: '+plan.duration+' min)' : ''}`);
+  if (s.totalDistance) lines.push(`Distanz:             ${(s.totalDistance/1000).toFixed(1)} km`);
+  if (s.avgPower) lines.push(`Ø Leistung:          ${fmt(s.avgPower)} W${plan?.watt ? ' (Ziel: '+plan.watt+' W)' : ''}`);
+  if (s.normalizedPower) lines.push(`Norm. Leistung:      ${fmt(s.normalizedPower)} W`);
+  if (ifVal) lines.push(`Intensity Factor:    ${fmtF(ifVal, 2)}`);
+  if (tss) lines.push(`TSS:                 ${Math.round(tss)}`);
+  if (s.avgHr) lines.push(`Ø Herzfrequenz:      ${fmt(s.avgHr)} bpm${plan?.hr ? ' (Ziel: '+plan.hr+')' : ''}`);
+  if (s.maxHr) lines.push(`Max HF:              ${fmt(s.maxHr)} bpm`);
+  if (s.avgCadence) lines.push(`Ø Trittfrequenz:     ${fmt(s.avgCadence)} rpm`);
+  if (plan?.notes) { lines.push(''); lines.push('<strong>Plan-Notiz:</strong> '+plan.notes); }
+  lines.push(''); lines.push(`FTP-Grundlage: ${ftp} W`);
+  return lines.join('\n');
+}
+
+function copyCoachText() {
+  if (!window._currentCoachText) return;
+  navigator.clipboard.writeText(window._currentCoachText).then(() => showToast('Kopiert! ✓'));
+}
+
+// ============================================================
+// KRAFT MODAL
+// ============================================================
+let currentKraftKey = null;
+
+function openKraftModal(key, dateObj, dayName) {
+  currentKraftKey = key;
+  const d = typeof dateObj === 'string' ? new Date(dateObj) : dateObj;
+  document.getElementById('kraftModalTitle').textContent = '💪 Kraft · ' + dayName + ', ' + formatDate(d);
+  const data = getWeekData();
+  const entry = data[key];
+  document.getElementById('kraftInput').value = entry?.kraft || settings.defaultKraft || '';
+  document.getElementById('kraftDeleteBtn').style.display = entry?.kraft ? 'block' : 'none';
+  document.getElementById('kraftOverlay').classList.add('open');
+}
+
+function deleteKraftOnly() {
+  const key = currentKraftKey;
+  if (!key) return;
+  pushUndo('Krafttraining löschen');
+  const data = getWeekData();
+  if (data[key]) {
+    delete data[key].kraft;
+    // Fixed: check if any meaningful fields remain
+    const remaining = Object.keys(data[key]).filter(k => data[key][k] !== undefined && data[key][k] !== '' && data[key][k] !== false);
+    if (remaining.length === 0 || (remaining.length === 1 && remaining[0] === '_hasFit' && !data[key].fitSummary)) {
+      delete data[key];
+    }
+  }
+  saveToStorage();
+  renderWeek();
+  closeKraftModal();
+  showToast('Krafttraining gelöscht', 'Krafttraining löschen');
+}
+
+function closeKraftModal() {
+  document.getElementById('kraftOverlay').classList.remove('open');
+  currentKraftKey = null;
+}
+
+function closeKraftOnOverlay(e) {
+  if (e.target === document.getElementById('kraftOverlay')) closeKraftModal();
+}
+
+function saveKraft() {
+  const key = currentKraftKey;
+  if (!key) return;
+  pushUndo('Krafttraining bearbeiten');
+  const data = getWeekData();
+  if (!data[key]) data[key] = {};
+  data[key].kraft = document.getElementById('kraftInput').value.trim();
+  saveToStorage();
+  renderWeek();
+  closeKraftModal();
+  showToast('Krafttraining gespeichert ✓', 'Krafttraining bearbeiten');
+}
+
+function renderKraftPreview(kraftText) {
+  if (!kraftText) return '';
+  const lines = kraftText.split('\n').filter(l => l.trim());
+  let html = '';
+  lines.forEach(line => {
+    const parts = line.split('•').map(p => p.trim()).filter(Boolean);
+    if (parts.length === 0) return;
+    const groupName = parts[0];
+    const exercises = parts.slice(1);
+    html += `<div class="kraft-group">
+      <div class="kraft-group-name">${groupName}</div>
+      ${exercises.map(ex => {
+        const [name, reps] = ex.split('→').map(p => p.trim());
+        return `<div class="kraft-exercise"><span>${name}</span>${reps ? ' · ' + reps : ''}</div>`;
+      }).join('')}
+    </div>`;
+  });
+  return html;
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+const ZONE_PCT = [0, 0.55, 0.75, 0.90, 1.05];
+const ZONE_NAMES = ['Z1 Aktive Erholung', 'Z2 Ausdauer', 'Z3 Tempo', 'Z4 Schwelle', 'Z5 VO2max+'];
+const ZONE_COLORS = ['#4ea8de', '#3df5a0', '#c8f135', '#ff9f43', '#ff4d6d'];
+
+let settings = { ftp: 220, maxHr: 190, defaultKraft: '' };
+
+function openSettings() {
+  document.getElementById('settingsFtp').value = settings.ftp;
+  document.getElementById('settingsMaxHr').value = settings.maxHr || 190;
+  document.getElementById('settingsDefaultKraft').value = settings.defaultKraft || '';
+  updateZonePreview();
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+
+function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+function closeSettingsOnOverlay(e) { if (e.target === document.getElementById('settingsOverlay')) closeSettings(); }
+
+function updateZonePreview() {
+  const ftp = parseInt(document.getElementById('settingsFtp').value) || settings.ftp;
+  const grid = document.getElementById('zonePreviewGrid');
+  if (!grid) return;
+  const limits = ZONE_PCT.map(p => Math.round(p * ftp));
+  const ranges = [`< ${limits[1]} W`, `${limits[1]}–${limits[2]} W`, `${limits[2]}–${limits[3]} W`, `${limits[3]}–${limits[4]} W`, `> ${limits[4]} W`];
+  grid.innerHTML = ZONE_NAMES.map((name, i) => `
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="width:3px; height:16px; background:${ZONE_COLORS[i]}; border-radius:1px; flex-shrink:0;"></div>
+      <span style="font-size:10px; color:var(--text2); width:130px;">${name}</span>
+      <span style="font-size:11px; color:${ZONE_COLORS[i]}; font-family:'Syne',sans-serif; font-weight:600;">${ranges[i]}</span>
+    </div>
+  `).join('');
+}
+
+function saveSettings() {
+  settings.ftp = parseInt(document.getElementById('settingsFtp').value) || 220;
+  settings.maxHr = parseInt(document.getElementById('settingsMaxHr').value) || 190;
+  settings.defaultKraft = document.getElementById('settingsDefaultKraft').value.trim();
+  try { localStorage.setItem('cyclingTrainer_settings', JSON.stringify(settings)); } catch(e) {}
+  closeSettings();
+  renderWeek();
+  showToast('Einstellungen gespeichert — FTP: ' + settings.ftp + ' W');
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('cyclingTrainer_settings');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      settings.ftp = parsed.ftp || 220;
+      settings.maxHr = parsed.maxHr || 190;
+      settings.defaultKraft = parsed.defaultKraft || '';
+    }
+  } catch(e) {}
+}
+
+// ============================================================
+// PRESETS PERSISTENCE
+// ============================================================
+function savePresetsToStorage() {
+  try { localStorage.setItem('cyclingTrainer_presets', JSON.stringify(presets)); } catch(e) {}
+}
+function loadPresetsFromStorage() {
+  try {
+    const raw = localStorage.getItem('cyclingTrainer_presets');
+    if (raw) presets = JSON.parse(raw);
+  } catch(e) {}
+}
+
+// ============================================================
+// PHASE ANNOTATIONS
+// ============================================================
+const PHASE_LABELS = {
+  base: '🔵 Grundlagen',
+  aufbau: '🟢 Aufbau',
+  peak: '🟠 Peak',
+  erholung: '💙 Erholung',
+  test: '🔴 Test',
+  'übergang': '⚫ Übergang',
+};
+
+function phaseLabel(p) { return PHASE_LABELS[p] || p; }
+
+function savePhaseForWeek() {
+  const wk = weekKey(currentWeekOffset);
+  const val = document.getElementById('phaseSelect').value;
+  if (val) {
+    phaseAnnotations[wk] = val;
+  } else {
+    delete phaseAnnotations[wk];
+  }
+  saveToStorage();
+  renderWeek();
+}
+
+// ============================================================
+// IMPORT
+// ============================================================
+let importWeekOffset = 0;
+let importMode = 'rad';
+
+const DAY_MAP = {
+  'mo': 0, 'di': 1, 'mi': 2, 'do': 3, 'fr': 4, 'sa': 5, 'so': 6,
+  'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6,
+  'montag': 0, 'dienstag': 1, 'mittwoch': 2, 'donnerstag': 3, 'freitag': 4, 'samstag': 5, 'sonntag': 6
+};
+
+const TYPE_KEYWORDS = {
+  zone2: ['zone 2', 'zone2', 'grundlage', 'ga1', 'ga 1', 'aerob'],
+  recovery: ['recovery', 'erholung', 'locker', 'regeneration', 'rekom'],
+  stimulus: ['stimulus', 'intervall', 'interval', 'tempo', 'schwelle', 'threshold'],
+  long: ['long ride', 'long', 'lang', 'ausdauer'],
+  free: ['frei', 'ruhe', 'pause', 'off', 'rest'],
+};
+
+function detectType(str) {
+  const s = str.toLowerCase();
+  for (const [t, kws] of Object.entries(TYPE_KEYWORDS)) {
+    if (kws.some(kw => s.includes(kw))) return t;
+  }
+  return 'other';
+}
+
+function cleanField(v) {
+  if (!v) return '';
+  const t = v.trim();
+  return (t === '-' || t === '') ? '' : t;
+}
+
+function switchImportTab(mode) {
+  importMode = mode;
+  document.getElementById('importTabRad').classList.toggle('active', mode === 'rad');
+  document.getElementById('importTabKraft').classList.toggle('active', mode === 'kraft');
+  document.getElementById('importFormatRad').style.display = mode === 'rad' ? 'block' : 'none';
+  document.getElementById('importFormatKraft').style.display = mode === 'kraft' ? 'block' : 'none';
+  document.getElementById('importTextLabel').textContent = mode === 'rad' ? 'Radtraining-Plan' : 'Krafttraining-Plan';
+  document.getElementById('importText').value = '';
+  document.getElementById('importPreview').style.display = 'none';
+}
+
+function openImport() {
+  importWeekOffset = currentWeekOffset;
+  importMode = 'rad';
+  switchImportTab('rad');
+  updateImportWeekLabel();
+  document.getElementById('importText').value = '';
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('importOverlay').classList.add('open');
+}
+
+function closeImport() { document.getElementById('importOverlay').classList.remove('open'); }
+function closeImportOnOverlay(e) { if (e.target === document.getElementById('importOverlay')) closeImport(); }
+function importWeekShift(dir) { importWeekOffset += dir; updateImportWeekLabel(); }
+function resetImportWeek() { importWeekOffset = 0; updateImportWeekLabel(); }
+
+function updateImportWeekLabel() {
+  const days = getWeekDays(importWeekOffset);
+  const suffix = importWeekOffset === 0 ? ' (aktuell)' : importWeekOffset === 1 ? ' (nächste)' : importWeekOffset === -1 ? ' (letzte)' : '';
+  document.getElementById('importWeekLabel').textContent =
+    formatDate(days[0]) + ' – ' + formatDate(days[6]) + ' ' + days[6].getFullYear() + suffix;
+}
+
+function fillImportExample() {
+  if (importMode === 'rad') {
+    document.getElementById('importText').value =
+`Mo - Zone 2, 90, 125-130, 130-140, 4, -, ruhig und konstant fahren
+Di - Recovery, 60, 95-110, 115-125, 3, -, sehr locker halten
+Mi - Stimulus, 75, -, 140-148, 6, 3x8min, nie härter als geplant
+Do - Zone 2, 90, 125, -, 4, -, sauber durchfahren
+Fr - Long Ride, 150, -, -, 4, -, Zone 2, essen & trinken nicht vergessen
+Sa - Recovery, 60, -, -, 2, -, sehr locker oder freinehmen
+So - Frei, -, -, -, -, -, -`;
+  } else {
+    document.getElementById('importText').value =
+`Mo - Push • Liegestütze → 20-30 • Schulterdrücken → 12-15
+Mo - Pull • Kurzhantelrudern → 12-15 je Seite • Hammer Curls → 12-15
+Mo - Core • Plank → 45-60 Sek • Crunches → 15-20`;
+  }
+}
+
+function parseRadLine(line) {
+  const dashIdx = line.search(/\s*-\s*/);
+  if (dashIdx < 0) return null;
+  const dayRaw = line.substring(0, dashIdx).trim().toLowerCase().replace(/[^a-züäö]/g, '');
+  const dayIdx = DAY_MAP[dayRaw];
+  if (dayIdx === undefined) return null;
+  const rest = line.substring(line.indexOf('-') + 1).trim();
+  const parts = rest.split(',').map(p => p.trim());
+  return {
+    dayIdx, type: detectType(cleanField(parts[0])), title: cleanField(parts[0]),
+    duration: cleanField(parts[1]), watt: cleanField(parts[2]),
+    hr: cleanField(parts[3]), rpe: cleanField(parts[4]),
+    intervals: cleanField(parts[5]),
+    notes: parts.slice(6).map(p => p.trim()).filter(p => p && p !== '-').join(', ')
+  };
+}
+
+function parseKraftLine(line) {
+  const dashIdx = line.search(/\s*-\s*/);
+  if (dashIdx < 0) return null;
+  const dayRaw = line.substring(0, dashIdx).trim().toLowerCase().replace(/[^a-züäö]/g, '');
+  const dayIdx = DAY_MAP[dayRaw];
+  if (dayIdx === undefined) return null;
+  return { dayIdx, kraftText: line.substring(line.indexOf('-') + 1).trim() };
+}
+
+function previewImport() {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) return;
+  const lines = text.split('\n').filter(l => l.trim());
+  const dayNames = getDayNames();
+
+  if (importMode === 'rad') {
+    const parsed = lines.map(parseRadLine).filter(Boolean);
+    if (parsed.length === 0) {
+      document.getElementById('importPreview').innerHTML = `<div style="color:var(--red); font-size:11px; padding:10px; border:1px solid var(--red);">Keine Einträge erkannt.</div>`;
+      document.getElementById('importPreview').style.display = 'block';
+      return;
+    }
+    let html = `<div style="border:1px solid var(--border);"><div style="padding:8px 14px; background:var(--surface2); font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted);">${parsed.length} Einträge erkannt</div>`;
+    parsed.forEach(p => {
+      html += `<div style="padding:9px 14px; border-bottom:1px solid var(--border); display:flex; gap:10px; font-size:11px; align-items:center; flex-wrap:wrap;">
+        <span style="font-family:'Syne',sans-serif; font-weight:700; color:var(--text2); min-width:24px;">${dayNames[p.dayIdx]}</span>
+        <span class="training-type-badge ${badgeClass(p.type)}">${typeLabel(p.type)}</span>
+        ${p.duration ? `<span style="color:var(--text2);">${p.duration} min</span>` : ''}
+        ${p.watt ? `<span style="color:var(--accent2);">⚡ ${p.watt} W</span>` : ''}
+        ${p.hr ? `<span style="color:var(--red);">♥ ${p.hr}</span>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+    document.getElementById('importPreview').innerHTML = html;
+    document.getElementById('importPreview').style.display = 'block';
+  } else {
+    const parsed = lines.map(parseKraftLine).filter(Boolean);
+    if (parsed.length === 0) {
+      document.getElementById('importPreview').innerHTML = `<div style="color:var(--red); font-size:11px; padding:10px; border:1px solid var(--red);">Keine Einträge erkannt.</div>`;
+      document.getElementById('importPreview').style.display = 'block';
+      return;
+    }
+    const byDay = {};
+    parsed.forEach(p => { if (!byDay[p.dayIdx]) byDay[p.dayIdx] = []; byDay[p.dayIdx].push(p.kraftText); });
+    let html = `<div style="border:1px solid var(--border);"><div style="padding:8px 14px; background:var(--surface2); font-size:9px; color:var(--muted);">${parsed.length} Zeilen erkannt</div>`;
+    Object.entries(byDay).forEach(([dayIdx, texts]) => {
+      html += `<div style="padding:9px 14px; border-bottom:1px solid var(--border);"><span style="font-family:'Syne',sans-serif; font-weight:700; color:var(--purple); font-size:11px;">${dayNames[dayIdx]}</span><div style="margin-top:6px; font-size:10px; color:var(--text2); line-height:1.7;">${texts.join('<br>')}</div></div>`;
+    });
+    html += '</div>';
+    document.getElementById('importPreview').innerHTML = html;
+    document.getElementById('importPreview').style.display = 'block';
+  }
+}
+
+function confirmImport() {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) return;
+  pushUndo('Plan importieren');
+  const lines = text.split('\n').filter(l => l.trim());
+  const days = getWeekDays(importWeekOffset);
+  const wk = weekKey(importWeekOffset);
+  if (!weekData[wk]) weekData[wk] = {};
+  const data = weekData[wk];
+
+  if (importMode === 'rad') {
+    const parsed = lines.map(parseRadLine).filter(Boolean);
+    if (parsed.length === 0) { alert('Keine Einträge.'); return; }
+    parsed.forEach(p => {
+      const key = dateKey(days[p.dayIdx]);
+      const existing = data[key] || {};
+      data[key] = { ...existing, type: p.type, duration: p.duration || '', watt: p.watt || '', hr: p.hr || '', rpe: p.rpe || '', intervals: p.intervals || '', notes: p.notes || '' };
+    });
+    showToast(parsed.length + ' Trainings importiert ✓', 'Plan importieren');
+  } else {
+    const parsed = lines.map(parseKraftLine).filter(Boolean);
+    if (parsed.length === 0) { alert('Keine Einträge.'); return; }
+    const byDay = {};
+    parsed.forEach(p => { if (!byDay[p.dayIdx]) byDay[p.dayIdx] = []; byDay[p.dayIdx].push(p.kraftText); });
+    Object.entries(byDay).forEach(([dayIdx, texts]) => {
+      const key = dateKey(days[parseInt(dayIdx)]);
+      if (!data[key]) data[key] = {};
+      data[key].kraft = texts.join('\n');
+    });
+    showToast(Object.keys(byDay).length + ' Kraft-Tage importiert ✓', 'Plan importieren');
+  }
+
+  saveToStorage();
+  currentWeekOffset = importWeekOffset;
+  document.getElementById('todayBtn').style.display = currentWeekOffset !== 0 ? 'block' : 'none';
+  renderWeek();
+  closeImport();
+}
+
+// ============================================================
+// COPY WEEK — NOW WITH CONFIRMATION
+// ============================================================
+function copyWeekToNext() {
+  const srcDays = getWeekDays(currentWeekOffset);
+  const dstDays = getWeekDays(currentWeekOffset + 1);
+  const dstWk = weekKey(currentWeekOffset + 1);
+  const dstData = weekData[dstWk];
+  const hasExisting = dstData && Object.keys(dstData).some(k => dstData[k]?.type);
+
+  if (hasExisting) {
+    if (!confirm(`KW ${getISOWeek(dstDays[0])} hat bereits Einträge. Planfelder überschreiben?`)) return;
+  }
+
+  pushUndo('Woche kopieren');
+  const srcData = getWeekData();
+  if (!weekData[dstWk]) weekData[dstWk] = {};
+
+  let copied = 0;
+  srcDays.forEach((d, i) => {
+    const srcKey = dateKey(d);
+    const dstKey = dateKey(dstDays[i]);
+    if (srcData[srcKey]) {
+      const src = srcData[srcKey];
+      weekData[dstWk][dstKey] = {
+        ...weekData[dstWk][dstKey],
+        type: src.type, duration: src.duration, watt: src.watt,
+        hr: src.hr, rpe: src.rpe, intervals: src.intervals,
+        notes: src.notes, kraft: src.kraft,
+      };
+      copied++;
+    }
+  });
+
+  saveToStorage();
+  showToast(`${copied} Einträge auf KW ${getISOWeek(dstDays[0])} kopiert ✓`, 'Woche kopieren');
+}
+
+// ============================================================
+// BACKUP / RESTORE (JSON)
+// ============================================================
+function openBackup() { document.getElementById('backupOverlay').classList.add('open'); }
+function closeBackup() { document.getElementById('backupOverlay').classList.remove('open'); }
+function closeBackupOnOverlay(e) { if (e.target === document.getElementById('backupOverlay')) closeBackup(); }
+
+function exportBackup() {
+  const backup = {
+    version: 2,
+    exportDate: new Date().toISOString(),
+    weekData: weekData,
+    settings: settings,
+    presets: presets,
+    phaseAnnotations: phaseAnnotations,
+  };
+  // Clean fitData.records from backup (too large)
+  const clean = JSON.parse(JSON.stringify(backup));
+  for (const wk in clean.weekData) {
+    for (const dk in clean.weekData[wk]) {
+      const e = clean.weekData[wk][dk];
+      if (e.fitData) {
+        if (!e.fitSummary) e.fitSummary = extractFitSummary(e.fitData);
+        e._hasFit = true;
+        delete e.fitData;
+      }
+    }
+  }
+
+  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `trainingsplaner-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup heruntergeladen ✓');
+}
+
+function importBackup(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data.weekData) throw new Error('Ungültiges Format');
+      pushUndo('Backup wiederherstellen');
+      weekData = data.weekData || {};
+      if (data.settings) {
+        settings = { ...settings, ...data.settings };
+        try { localStorage.setItem('cyclingTrainer_settings', JSON.stringify(settings)); } catch(e) {}
+      }
+      if (data.presets) {
+        presets = data.presets;
+        savePresetsToStorage();
+      }
+      if (data.phaseAnnotations) {
+        phaseAnnotations = data.phaseAnnotations;
+      }
+      saveToStorage();
+      renderWeek();
+      closeBackup();
+      showToast('Backup wiederhergestellt ✓ (' + Object.keys(weekData).length + ' Wochen)', 'Backup wiederherstellen');
+    } catch(err) {
+      alert('Fehler beim Laden des Backups: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ============================================================
+// STATS TAB — WITH CTL/ATL/TSB + FILTER + PHASES
+// ============================================================
+function setStatsFilter(val, btn) {
+  statsFilterWeeks = val;
+  document.querySelectorAll('.stats-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStatsTab();
+}
+
+function getAllWeekStats() {
+  const weeks = [];
+  const ftp = settings.ftp;
+
+  const allKeys = Object.keys(weekData).sort();
+  allKeys.forEach(wk => {
+    const data = weekData[wk];
+    if (!data || Object.keys(data).length === 0) return;
+
+    let tss = 0, totalPower = 0, powerCount = 0, totalHr = 0, hrCount = 0;
+    let planDuration = 0, fitDuration = 0, fitCount = 0, planCount = 0;
+    const hfZoneTimes = [0, 0, 0, 0, 0];
+
+    Object.values(data).forEach(entry => {
+      if (!entry || entry.type === 'free') return;
+      planCount++;
+      planDuration += parseFloat(entry.duration) || 0;
+      const fit = entry.fitData || entry.fitSummary;
+      if (fit) {
+        fitCount++;
+        const np = fit.normalizedPower || fit.np;
+        if (fit.tss) tss += fit.tss;
+        else if (np && ftp && fit.totalTime) tss += calcTSS(np, ftp, fit.totalTime);
+        if (fit.avgPower) { totalPower += fit.avgPower; powerCount++; }
+        if (fit.avgHr) { totalHr += fit.avgHr; hrCount++; }
+        fitDuration += fit.totalTime ? fit.totalTime / 60 : 0;
+      }
+      // HR zones from records if available
+      if (entry.fitData?.records?.heartRate) {
+        entry.fitData.records.heartRate.forEach(hr => {
+          const pct = hr / (settings.maxHr || 190);
+          if (pct < 0.60) hfZoneTimes[0]++;
+          else if (pct < 0.70) hfZoneTimes[1]++;
+          else if (pct < 0.80) hfZoneTimes[2]++;
+          else if (pct < 0.90) hfZoneTimes[3]++;
+          else hfZoneTimes[4]++;
+        });
+      }
+    });
+
+    // Parse weekKey (it's a date like 2025-03-03)
+    const monday = new Date(wk + 'T00:00:00');
+    const isoWeek = getISOWeek(monday);
+
+    weeks.push({
+      wk, year: monday.getFullYear(), week: isoWeek, monday,
+      label: `KW ${isoWeek} · ${monday.getFullYear()}`,
+      tss: Math.round(tss),
+      avgPower: powerCount ? Math.round(totalPower / powerCount) : 0,
+      avgHr: hrCount ? Math.round(totalHr / hrCount) : 0,
+      planDuration: Math.round(planDuration),
+      fitDuration: Math.round(fitDuration),
+      fitCount, planCount, hfZoneTimes,
+      phase: phaseAnnotations[wk] || null,
+    });
+  });
+
+  return weeks.sort((a, b) => a.monday - b.monday);
+}
+
+function renderStatsTab() {
+  let weeks = getAllWeekStats();
+  const ftp = settings.ftp;
+  document.getElementById('statsftpLabel').textContent = ftp || '—';
+
+  // Update phase selector for current week
+  const currentWk = weekKey(currentWeekOffset);
+  document.getElementById('phaseSelect').value = phaseAnnotations[currentWk] || '';
+
+  // Apply filter
+  if (statsFilterWeeks !== 'all' && weeks.length > statsFilterWeeks) {
+    weeks = weeks.slice(-statsFilterWeeks);
+  }
+
+  // Period grid
+  const maxTss = Math.max(...weeks.map(w => w.tss), 1);
+  const grid = document.getElementById('periodGrid');
+  grid.innerHTML = weeks.length === 0
+    ? `<div style="font-size:11px; color:var(--muted); padding:20px 0;">Noch keine Wochen mit Trainingsdaten.</div>`
+    : weeks.map(w => `
+      <div class="period-week-card ${w.wk === currentWk ? 'current-week' : ''}">
+        <div class="period-week-label">${w.label}</div>
+        <div class="period-week-tss">${w.tss || '—'}</div>
+        <div class="period-week-meta">
+          ${w.fitCount}/${w.planCount} FIT · ${w.avgPower ? w.avgPower+'W' : '—'} · ${w.avgHr ? '♥'+w.avgHr : '—'}
+        </div>
+        ${w.phase ? `<span class="phase-badge phase-${w.phase}">${phaseLabel(w.phase)}</span>` : ''}
+        <div class="period-tss-bar-wrap">
+          <div class="period-tss-bar" style="width:${w.tss ? Math.round(w.tss/maxTss*100) : 0}%"></div>
+        </div>
+      </div>`).join('');
+
+  if (weeks.length < 2) {
+    document.getElementById('chartTss').parentElement.querySelector('.chart-title-row').insertAdjacentHTML('afterend',
+      `<div style="font-size:11px; color:var(--muted); margin-top:8px;">Mindestens 2 Wochen mit Daten nötig.</div>`);
+    return;
+  }
+
+  const labels = weeks.map(w => `KW ${w.week}`);
+
+  // PMC Chart (CTL/ATL/TSB)
+  renderPMCChart(weeks);
+
+  drawLineChart('chartTss', labels, [{ label: 'TSS', data: weeks.map(w => w.tss), color: '#c8f135', fill: true }]);
+  drawLineChart('chartPower', labels, [{ label: 'Ø Watt', data: weeks.map(w => w.avgPower || null), color: '#3df5a0', fill: false }]);
+  drawLineChart('chartHr', labels, [{ label: 'Ø HF', data: weeks.map(w => w.avgHr || null), color: '#ff4d6d', fill: false }]);
+
+  const totalHfZones = [0, 0, 0, 0, 0];
+  weeks.forEach(w => w.hfZoneTimes.forEach((t, i) => totalHfZones[i] += t));
+  const totalHfSec = totalHfZones.reduce((a, b) => a + b, 0);
+  if (totalHfSec > 0) {
+    drawBarChart('chartHfZones', ['Z1 Erholung', 'Z2 Aerob', 'Z3 Tempo', 'Z4 Schwelle', 'Z5 VO2max'],
+      totalHfZones.map(t => Math.round(t / totalHfSec * 100)), ZONE_COLORS);
+  }
+}
+
+// ============================================================
+// PMC — CTL / ATL / TSB
+// ============================================================
+function renderPMCChart(weeks) {
+  if (weeks.length < 2) return;
+
+  // Build daily TSS array from weekly data
+  // Each week's TSS is spread across the days that had training
+  const dailyTSS = [];
+  const dailyLabels = [];
+
+  weeks.forEach(w => {
+    const data = weekData[w.wk];
+    if (!data) return;
+    const ftp = settings.ftp;
+    const monday = new Date(w.wk + 'T00:00:00');
+
+    for (let d = 0; d < 7; d++) {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + d);
+      const key = dateKey(day);
+      const entry = data[key];
+      let dayTss = 0;
+
+      if (entry) {
+        const fit = entry.fitData || entry.fitSummary;
+        if (fit) {
+          const np = fit.normalizedPower || fit.np;
+          if (fit.tss) dayTss = fit.tss;
+          else if (np && ftp && fit.totalTime) dayTss = calcTSS(np, ftp, fit.totalTime);
+        }
+      }
+
+      dailyTSS.push(dayTss);
+      dailyLabels.push(key);
+    }
+  });
+
+  if (dailyTSS.length < 7) return;
+
+  // Calculate CTL (42d EMA), ATL (7d EMA), TSB
+  const ctl = [], atl = [], tsb = [];
+  let ctlVal = 0, atlVal = 0;
+
+  dailyTSS.forEach((tss, i) => {
+    ctlVal = ctlVal + (tss - ctlVal) / 42;
+    atlVal = atlVal + (tss - atlVal) / 7;
+    ctl.push(Math.round(ctlVal * 10) / 10);
+    atl.push(Math.round(atlVal * 10) / 10);
+    tsb.push(Math.round((ctlVal - atlVal) * 10) / 10);
+  });
+
+  // Sample to weekly for readability
+  const weeklyLabels = weeks.map(w => `KW ${w.week}`);
+  const weeklyCTL = [], weeklyATL = [], weeklyTSB = [];
+
+  for (let i = 0; i < weeks.length; i++) {
+    const idx = Math.min((i + 1) * 7 - 1, dailyTSS.length - 1);
+    weeklyCTL.push(ctl[idx]);
+    weeklyATL.push(atl[idx]);
+    weeklyTSB.push(tsb[idx]);
+  }
+
+  drawMultiLineChart('chartPmc', weeklyLabels, [
+    { label: 'CTL', data: weeklyCTL, color: '#3df5a0' },
+    { label: 'ATL', data: weeklyATL, color: '#ff4d6d' },
+    { label: 'TSB', data: weeklyTSB, color: '#c8f135', dashed: true },
+  ]);
+}
+
+function drawMultiLineChart(canvasId, labels, datasets) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = canvas.height;
+  canvas.width = W;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 20, right: 20, bottom: 30, left: 44 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+  const n = labels.length;
+  if (n < 2) return;
+
+  const allVals = datasets.flatMap(d => d.data.filter(v => v !== null));
+  const minV = Math.min(...allVals, 0) * 1.1;
+  const maxV = Math.max(...allVals) * 1.1;
+  const range = maxV - minV || 1;
+
+  const xPos = i => pad.left + (i / (n - 1)) * chartW;
+  const yPos = v => pad.top + chartH - ((v - minV) / range) * chartH;
+
+  // Grid
+  ctx.strokeStyle = '#2a2c30'; ctx.lineWidth = 1;
+  for (let j = 0; j <= 4; j++) {
+    const y = pad.top + (j / 4) * chartH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
+    const val = Math.round(maxV - (j / 4) * range);
+    ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono';
+    ctx.textAlign = 'right'; ctx.fillText(val, pad.left - 4, y + 3);
+  }
+
+  // Zero line
+  if (minV < 0 && maxV > 0) {
+    const y0 = yPos(0);
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(pad.left, y0); ctx.lineTo(pad.left + chartW, y0); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // X labels
+  ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono'; ctx.textAlign = 'center';
+  labels.forEach((l, i) => {
+    if (n > 12 && i % 2 !== 0) return;
+    ctx.fillText(l, xPos(i), H - 4);
+  });
+
+  datasets.forEach(ds => {
+    const points = ds.data.map((v, i) => v !== null ? { x: xPos(i), y: yPos(v) } : null);
+    ctx.strokeStyle = ds.color; ctx.lineWidth = ds.dashed ? 1.5 : 2;
+    if (ds.dashed) ctx.setLineDash([6, 3]); else ctx.setLineDash([]);
+
+    ctx.beginPath(); let started = false;
+    points.forEach(p => {
+      if (!p) { started = false; return; }
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Dots
+    ctx.fillStyle = ds.color;
+    points.forEach(p => {
+      if (!p) return;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill();
+    });
+  });
+}
+
+function drawLineChart(canvasId, labels, datasets) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = canvas.height;
+  canvas.width = W;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 20, right: 20, bottom: 30, left: 44 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+  const n = labels.length;
+  if (n < 2) return;
+
+  const allVals = datasets.flatMap(d => d.data.filter(v => v !== null));
+  const minV = Math.min(...allVals) * 0.9;
+  const maxV = Math.max(...allVals) * 1.05;
+  const range = maxV - minV || 1;
+
+  const xPos = i => pad.left + (i / (n - 1)) * chartW;
+  const yPos = v => pad.top + chartH - ((v - minV) / range) * chartH;
+
+  ctx.strokeStyle = '#2a2c30'; ctx.lineWidth = 1;
+  for (let j = 0; j <= 4; j++) {
+    const y = pad.top + (j / 4) * chartH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
+    const val = Math.round(maxV - (j / 4) * range);
+    ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono';
+    ctx.textAlign = 'right'; ctx.fillText(val, pad.left - 4, y + 3);
+  }
+
+  ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono'; ctx.textAlign = 'center';
+  labels.forEach((l, i) => {
+    if (n > 12 && i % 2 !== 0) return;
+    ctx.fillText(l, xPos(i), H - 4);
+  });
+
+  datasets.forEach(ds => {
+    const points = ds.data.map((v, i) => v !== null ? { x: xPos(i), y: yPos(v) } : null);
+    ctx.strokeStyle = ds.color; ctx.lineWidth = 2;
+
+    if (ds.fill) {
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        if (!p) return;
+        i === 0 || !points[i-1] ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+      });
+      ctx.lineTo(xPos(n-1), pad.top + chartH);
+      ctx.lineTo(xPos(0), pad.top + chartH);
+      ctx.closePath();
+      ctx.fillStyle = ds.color + '18';
+      ctx.fill();
+    }
+
+    ctx.beginPath(); let started = false;
+    points.forEach(p => {
+      if (!p) { started = false; return; }
+      if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+
+    ctx.fillStyle = ds.color;
+    points.forEach(p => {
+      if (!p) return;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+    });
+  });
+}
+
+function drawBarChart(canvasId, labels, values, colors) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = canvas.height;
+  canvas.width = W;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 16, right: 20, bottom: 28, left: 36 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+  const n = values.length;
+  const maxV = Math.max(...values, 1);
+  const barW = chartW / n * 0.65;
+  const gap = chartW / n;
+
+  values.forEach((v, i) => {
+    const x = pad.left + i * gap + (gap - barW) / 2;
+    const barH = (v / maxV) * chartH;
+    const y = pad.top + chartH - barH;
+    ctx.fillStyle = colors[i] || '#555860';
+    ctx.fillRect(x, y, barW, barH);
+    ctx.font = '10px DM Mono'; ctx.textAlign = 'center';
+    ctx.fillText(v + '%', x + barW / 2, y - 4);
+    ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono';
+    ctx.fillText(labels[i], x + barW / 2, H - 4);
+  });
+}
+
+// ============================================================
+// COACH EXPORT — with compliance
+// ============================================================
+let coachExportOffset = 0;
+
+function openCoachExport() {
+  coachExportOffset = currentWeekOffset;
+  updateCoachExportWeekLabel();
+  updateCoachExportPreview();
+  document.getElementById('coachExportOverlay').classList.add('open');
+}
+
+function closeCoachExport() { document.getElementById('coachExportOverlay').classList.remove('open'); }
+function closeCoachExportOnOverlay(e) { if (e.target === document.getElementById('coachExportOverlay')) closeCoachExport(); }
+function coachExportWeekShift(dir) { coachExportOffset += dir; updateCoachExportWeekLabel(); updateCoachExportPreview(); }
+function resetCoachExportWeek() { coachExportOffset = 0; updateCoachExportWeekLabel(); updateCoachExportPreview(); }
+
+function updateCoachExportWeekLabel() {
+  const days = getWeekDays(coachExportOffset);
+  document.getElementById('coachExportWeekLabel').textContent =
+    `KW ${getISOWeek(days[0])} · ${formatDate(days[0])} – ${formatDate(days[6])} ${days[6].getFullYear()}`;
+}
+
+function buildCoachExportText() {
+  const incRad = document.getElementById('exportOptRad').checked;
+  const incKraft = document.getElementById('exportOptKraft').checked;
+  const incPost = document.getElementById('exportOptPostNotes').checked;
+  const incCompliance = document.getElementById('exportOptCompliance').checked;
+
+  const days = getWeekDays(coachExportOffset);
+  const wk = weekKey(coachExportOffset);
+  const data = weekData[wk] || {};
+  const dayNames = getDayNames();
+  const ftp = settings.ftp;
+
+  const weekLabel = `KW ${getISOWeek(days[0])} · ${formatDate(days[0])} – ${formatDate(days[6])} ${days[6].getFullYear()}`;
+  const phase = phaseAnnotations[wk];
+  let lines = [`=== Wochenbericht ${weekLabel} ===${phase ? ' ['+phaseLabel(phase)+']' : ''}\n`];
+
+  let totalPlanned = 0, totalActual = 0, totalTss = 0;
+
+  days.forEach((d, i) => {
+    const key = dateKey(d);
+    const entry = data[key];
+    if (!entry) return;
+
+    const sections = [];
+
+    if (incRad && entry.type) {
+      let rad = `🚴 ${typeLabel(entry.type)}`;
+      if (entry.duration) rad += ` · ${entry.duration} min geplant`;
+      if (entry.watt) rad += ` · ${entry.watt} W`;
+      if (entry.hr) rad += ` · Puls ${entry.hr}`;
+      if (entry.rpe) rad += ` · RPE Ziel ${entry.rpe}`;
+      if (entry.intervals) rad += ` · ${entry.intervals}`;
+      if (entry.notes) rad += `\n   Hinweis: ${entry.notes}`;
+
+      const fit = entry.fitData || entry.fitSummary;
+      if (fit) {
+        const np = fit.normalizedPower || fit.np;
+        const tss = fit.tss || (np && ftp && fit.totalTime ? calcTSS(np, ftp, fit.totalTime) : null);
+        if (tss) totalTss += tss;
+        rad += `\n   IST: ${fit.avgPower ? Math.round(fit.avgPower)+'W Ø' : ''}${np ? ' / NP '+Math.round(np)+'W' : ''}${fit.avgHr ? ' · HF '+Math.round(fit.avgHr)+' bpm' : ''}${fit.totalTime ? ' · '+Math.round(fit.totalTime/60)+' min' : ''}${tss ? ' · TSS '+Math.round(tss) : ''}`;
+      }
+      sections.push(rad);
+      totalPlanned += parseFloat(entry.duration) || 0;
+      totalActual += parseFloat(entry.durationActual) || (fit?.totalTime ? fit.totalTime/60 : 0);
+    }
+
+    if (incPost && (entry.rpeActual || entry.durationActual || entry.postNotes)) {
+      let post = `📝 Nach dem Training:`;
+      if (entry.rpeActual) post += ` RPE ${entry.rpeActual}/10`;
+      if (entry.durationActual) post += ` · ${entry.durationActual} min tatsächlich`;
+      if (entry.postNotes) post += `\n   "${entry.postNotes}"`;
+      sections.push(post);
+    }
+
+    if (incKraft && entry.kraft) {
+      sections.push(`💪 Kraft: ${entry.kraft.replace(/\n/g, ' | ')}`);
+    }
+
+    if (sections.length > 0) {
+      lines.push(`── ${dayNames[i]} ${formatDate(d)} ──`);
+      sections.forEach(s => lines.push(s));
+      lines.push('');
+    }
+  });
+
+  if (incCompliance && totalPlanned > 0) {
+    const pct = Math.round(totalActual / totalPlanned * 100);
+    lines.push(`── Wochen-Zusammenfassung ──`);
+    lines.push(`Geplant: ${Math.round(totalPlanned)} min · Tatsächlich: ${Math.round(totalActual)} min · Compliance: ${pct}%`);
+    if (totalTss) lines.push(`Wochen-TSS: ${Math.round(totalTss)}`);
+    lines.push('');
+  }
+
+  if (lines.length <= 2) lines.push('Keine Einträge für diese Woche.');
+  return lines.join('\n');
+}
+
+function updateCoachExportPreview() {
+  document.getElementById('coachExportPreview').textContent = buildCoachExportText();
+}
+
+function copyCoachExport() {
+  const text = buildCoachExportText();
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Coach-Text kopiert ✓');
+    closeCoachExport();
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Coach-Text kopiert ✓');
+    closeCoachExport();
+  });
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal(); closeKraftModal(); closeSettings();
+    closeImport(); closeAnalysis(); closeCoachExport();
+    closeMove(); closeBackup();
+  }
+  // Arrow keys for week navigation (only when no modal open and no input focused)
+  const activeTag = document.activeElement?.tagName;
+  if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+  if (document.querySelector('.modal-overlay.open')) return;
+
+  if (e.key === 'ArrowLeft') { e.preventDefault(); changeWeek(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); changeWeek(1); }
+  if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); performUndo(); }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+loadFromStorage();
+renderWeek();
+</script>
+</body>
+</html>
