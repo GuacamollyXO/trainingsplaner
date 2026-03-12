@@ -5,86 +5,82 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trainingsplaner</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
   :root {
-    --bg: #0e0f11;
-    --surface: #161719;
-    --surface2: #1e2023;
-    --border: #2a2c30;
-    --accent: #c8f135;
-    --accent2: #3df5a0;
-    --muted: #555860;
-    --text: #e8eaed;
-    --text2: #9da0a8;
-    --red: #ff4d6d;
-    --orange: #ff9f43;
-    --blue: #4ea8de;
-    --purple: #9b72cf;
+    --bg: #131620;
+    --surface: #1a1e2e;
+    --surface2: #222738;
+    --border: #2e3348;
+    --accent: #7c9aff;
+    --accent2: #5de4b8;
+    --muted: #5c6280;
+    --text: #e6e8f0;
+    --text2: #a0a5bd;
+    --red: #f47087;
+    --orange: #f0a060;
+    --blue: #6aaddf;
+    --purple: #a882e0;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 14px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'DM Mono', monospace;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
-  }
-
-  /* Grain overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0.4;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
 
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 24px 40px;
+    padding: 20px 36px;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
-    background: rgba(14,15,17,0.95);
-    backdrop-filter: blur(12px);
+    background: rgba(19,22,32,0.92);
+    backdrop-filter: blur(16px);
     z-index: 100;
   }
 
   .logo {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 800;
     font-size: 20px;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
     display: flex;
     align-items: center;
     gap: 10px;
   }
 
   .logo-dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     background: var(--accent);
     border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
+    animation: pulse 2.5s ease-in-out infinite;
+    box-shadow: 0 0 12px rgba(124,154,255,0.4);
   }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
+    50% { opacity: 0.6; transform: scale(0.85); }
   }
 
   .week-nav {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text2);
     flex-wrap: wrap;
   }
@@ -93,22 +89,25 @@
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 6px 12px;
+    padding: 7px 14px;
     cursor: pointer;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    transition: all 0.15s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    transition: all 0.2s;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
   }
 
   .week-nav button:hover {
     border-color: var(--accent);
     color: var(--accent);
+    background: rgba(124,154,255,0.08);
   }
 
   .week-label {
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 13px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
     color: var(--text);
     min-width: 120px;
     text-align: center;
@@ -117,28 +116,28 @@
   main {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 32px 40px;
+    padding: 28px 36px;
   }
 
   .tabs {
     display: flex;
-    gap: 2px;
-    margin-bottom: 32px;
+    gap: 4px;
+    margin-bottom: 28px;
     border-bottom: 1px solid var(--border);
   }
 
   .tab {
-    padding: 10px 20px;
+    padding: 11px 22px;
     background: none;
     border: none;
     color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     position: relative;
-    transition: color 0.15s;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    transition: color 0.2s;
+    letter-spacing: 0.02em;
   }
 
   .tab.active {
@@ -149,10 +148,11 @@
     content: '';
     position: absolute;
     bottom: -1px;
-    left: 0;
-    right: 0;
+    left: 8px;
+    right: 8px;
     height: 2px;
     background: var(--accent);
+    border-radius: 2px 2px 0 0;
   }
 
   .tab:hover:not(.active) { color: var(--text2); }
@@ -169,40 +169,42 @@
 
   .week-day-block {
     display: grid;
-    grid-template-columns: 72px 1fr;
+    grid-template-columns: 78px 1fr;
     gap: 0;
     border: 1px solid var(--border);
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    border-radius: var(--radius);
+    overflow: hidden;
   }
 
-  .week-day-block:hover { border-color: var(--muted); }
-  .week-day-block.has-fit { border-color: #1e3040; }
-  .week-day-block.is-today { border-color: #3a3f2a; }
-  .week-day-block.drag-over { border-color: var(--accent); background: rgba(200,241,53,0.03); }
+  .week-day-block:hover { border-color: rgba(124,154,255,0.3); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+  .week-day-block.has-fit { border-color: rgba(93,228,184,0.25); }
+  .week-day-block.is-today { border-color: rgba(124,154,255,0.4); box-shadow: 0 0 0 1px rgba(124,154,255,0.15); }
+  .week-day-block.drag-over { border-color: var(--accent); background: rgba(124,154,255,0.04); }
 
   .week-day-label {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: 16px 0 16px;
+    padding: 18px 0 18px;
     background: var(--surface2);
     border-right: 1px solid var(--border);
     position: relative;
-    gap: 2px;
+    gap: 3px;
   }
 
   .week-day-name {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 800;
     font-size: 15px;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
     color: var(--text2);
   }
 
   .week-day-date {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--muted);
   }
 
@@ -211,12 +213,13 @@
   .today-pill {
     margin-top: 6px;
     background: var(--accent);
-    color: #000;
-    font-size: 7px;
+    color: #fff;
+    font-size: 8px;
     font-weight: 700;
-    font-family: 'Syne', sans-serif;
-    padding: 2px 5px;
-    letter-spacing: 0.1em;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    padding: 2px 8px;
+    letter-spacing: 0.08em;
+    border-radius: 8px;
   }
 
   .week-day-content {
@@ -238,21 +241,21 @@
   .day-rad:hover { background: rgba(255,255,255,0.02); }
 
   .day-section-label {
-    font-size: 8px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 500;
-    margin-bottom: 2px;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-bottom: 3px;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
   }
   .day-section-label::before {
     content: '';
     width: 3px;
-    height: 8px;
+    height: 10px;
     display: inline-block;
-    border-radius: 1px;
+    border-radius: 2px;
   }
   .label-rad { color: var(--accent2); }
   .label-rad::before { background: var(--accent2); }
@@ -262,7 +265,7 @@
   /* KRAFT section */
   .day-kraft {
     border-top: 1px solid var(--border);
-    background: rgba(155,114,207,0.02);
+    background: rgba(168,130,224,0.02);
     overflow: hidden;
   }
 
@@ -275,7 +278,7 @@
     transition: background 0.15s;
     user-select: none;
   }
-  .day-kraft-header:hover { background: rgba(155,114,207,0.06); }
+  .day-kraft-header:hover { background: rgba(168,130,224,0.06); }
 
   .kraft-toggle-icon {
     font-size: 9px;
@@ -295,26 +298,27 @@
 
   .day-kraft-empty {
     font-size: 10px;
-    color: rgba(155,114,207,0.3);
+    color: rgba(168,130,224,0.3);
     font-style: italic;
   }
 
   .training-type-badge {
     display: inline-block;
-    padding: 3px 8px;
-    font-size: 9px;
+    padding: 4px 10px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 500;
+    letter-spacing: 0.06em;
+    font-weight: 600;
     border: 1px solid;
+    border-radius: 6px;
   }
 
-  .badge-zone2 { color: var(--accent2); border-color: var(--accent2); background: rgba(61,245,160,0.06); }
-  .badge-recovery { color: var(--blue); border-color: var(--blue); background: rgba(78,168,222,0.06); }
-  .badge-stimulus { color: var(--orange); border-color: var(--orange); background: rgba(255,159,67,0.06); }
-  .badge-long { color: var(--purple); border-color: var(--purple); background: rgba(155,114,207,0.06); }
-  .badge-free { color: var(--muted); border-color: var(--muted); background: transparent; }
-  .badge-other { color: var(--text2); border-color: var(--text2); background: transparent; }
+  .badge-zone2 { color: var(--accent2); border-color: rgba(93,228,184,0.3); background: rgba(93,228,184,0.08); }
+  .badge-recovery { color: var(--blue); border-color: rgba(106,173,223,0.3); background: rgba(106,173,223,0.08); }
+  .badge-stimulus { color: var(--orange); border-color: rgba(240,160,96,0.3); background: rgba(240,160,96,0.08); }
+  .badge-long { color: var(--purple); border-color: rgba(168,130,224,0.3); background: rgba(168,130,224,0.08); }
+  .badge-free { color: var(--muted); border-color: rgba(92,98,128,0.3); background: transparent; }
+  .badge-other { color: var(--text2); border-color: rgba(160,165,189,0.3); background: transparent; }
 
   .plan-summary {
     flex: 1;
@@ -327,17 +331,18 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 10px;
+    font-size: 12px;
     color: var(--text2);
   }
 
   .plan-stat-val {
     color: var(--text);
-    font-size: 11px;
+    font-size: 13px;
+    font-weight: 600;
   }
 
   .plan-notes {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--muted);
     line-height: 1.5;
     font-style: italic;
@@ -347,13 +352,14 @@
   }
 
   .upload-indicator {
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 10px;
     padding: 5px 8px;
-    background: rgba(78,168,222,0.08);
-    border: 1px solid rgba(78,168,222,0.2);
+    background: rgba(106,173,223,0.08);
+    border: 1px solid rgba(106,173,223,0.2);
     color: var(--blue);
     margin-top: auto;
   }
@@ -431,7 +437,9 @@
     max-height: 90vh;
     overflow-y: auto;
     transform: translateY(20px);
-    transition: transform 0.2s;
+    transition: transform 0.25s ease;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
   }
 
   .modal-overlay.open .modal {
@@ -448,12 +456,13 @@
     top: 0;
     background: var(--surface);
     z-index: 5;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 
   .modal-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .modal-close {
@@ -491,26 +500,29 @@
   .form-group.full { grid-column: 1 / -1; }
 
   label {
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--text2);
+    font-weight: 600;
   }
 
   input, select, textarea {
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 8px 12px;
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
+    padding: 10px 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px;
     outline: none;
-    transition: border-color 0.15s;
+    transition: border-color 0.2s, box-shadow 0.2s;
     width: 100%;
+    border-radius: var(--radius-sm);
   }
 
   input:focus, select:focus, textarea:focus {
     border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,154,255,0.12);
   }
 
   select option { background: var(--surface2); }
@@ -527,14 +539,15 @@
   }
 
   .btn {
-    padding: 9px 20px;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
+    padding: 10px 22px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
     border: 1px solid;
-    transition: all 0.15s;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+    border-radius: var(--radius-sm);
   }
 
   .btn-ghost {
@@ -546,17 +559,19 @@
   .btn-ghost:hover {
     border-color: var(--text2);
     color: var(--text);
+    background: rgba(255,255,255,0.03);
   }
 
   .btn-primary {
     background: var(--accent);
     border-color: var(--accent);
-    color: #000;
-    font-weight: 500;
+    color: #fff;
+    font-weight: 600;
   }
 
   .btn-primary:hover {
-    background: #d4ff45;
+    background: #8daaff;
+    box-shadow: 0 4px 14px rgba(124,154,255,0.3);
   }
 
   .btn-danger {
@@ -573,16 +588,17 @@
   /* UPLOAD ZONE */
   .upload-zone {
     border: 2px dashed var(--border);
-    padding: 24px;
+    padding: 28px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
     background: transparent;
+    border-radius: var(--radius);
   }
 
   .upload-zone:hover, .upload-zone.drag-over {
     border-color: var(--blue);
-    background: rgba(78,168,222,0.04);
+    background: rgba(106,173,223,0.05);
   }
 
   .upload-zone input[type=file] {
@@ -614,7 +630,7 @@
   }
 
   .analysis-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 800;
     font-size: 22px;
   }
@@ -635,7 +651,8 @@
   .stat-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    padding: 16px;
+    padding: 18px;
+    border-radius: var(--radius);
   }
 
   .stat-label {
@@ -647,9 +664,9 @@
   }
 
   .stat-value {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 24px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    font-size: 26px;
     line-height: 1;
   }
 
@@ -674,8 +691,9 @@
   .chart-area {
     background: var(--surface);
     border: 1px solid var(--border);
-    padding: 20px;
-    margin-bottom: 12px;
+    padding: 22px;
+    margin-bottom: 14px;
+    border-radius: var(--radius);
   }
 
   .chart-title {
@@ -737,12 +755,13 @@
     font-size: 10px;
     text-align: center;
     color: var(--text);
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 600;
   }
 
   /* COACH EXPORT */
   .coach-export {
+    border-radius: var(--radius);
     background: var(--surface);
     border: 1px solid var(--border);
     margin-top: 24px;
@@ -769,7 +788,7 @@
     line-height: 1.8;
     color: var(--text2);
     white-space: pre-wrap;
-    font-family: 'DM Mono', monospace;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
   .coach-export-body strong {
@@ -785,6 +804,7 @@
   }
 
   .comparison-card {
+    border-radius: var(--radius);
     background: var(--surface);
     border: 1px solid var(--border);
     padding: 16px;
@@ -831,7 +851,7 @@
   }
 
   .empty-analysis h3 {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 18px;
     font-weight: 700;
     color: var(--text2);
@@ -858,20 +878,21 @@
   }
 
   .fit-uploaded-info {
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    background: rgba(78,168,222,0.07);
-    border: 1px solid rgba(78,168,222,0.2);
+    background: rgba(106,173,223,0.07);
+    border: 1px solid rgba(106,173,223,0.2);
     font-size: 11px;
     color: var(--blue);
   }
 
   /* scrollbar */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
   /* Kraft card specifics */
@@ -889,21 +910,22 @@
     color: var(--text2);
     line-height: 1.5;
     padding-left: 8px;
-    border-left: 2px solid rgba(155,114,207,0.3);
+    border-left: 2px solid rgba(168,130,224,0.3);
   }
   .kraft-exercise span { color: var(--text); }
 
   /* Responsive */
   @media (max-width: 768px) {
     header { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
-    main { padding: 20px; }
-    .week-day-block { grid-template-columns: 52px 1fr; }
-    .week-day-name { font-size: 12px; }
+    main { padding: 16px; }
+    .week-day-block { grid-template-columns: 56px 1fr; }
+    .week-day-name { font-size: 13px; }
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .zone-breakdown { grid-template-columns: repeat(5, 1fr); }
     .comparison-grid { grid-template-columns: 1fr; }
     .week-nav { gap: 4px; }
-    .week-nav button { padding: 5px 8px; font-size: 10px; }
+    .week-nav button { padding: 5px 10px; font-size: 11px; }
+    .week-summary { grid-template-columns: repeat(3, 1fr) auto; }
   }
 
   .loading-overlay {
@@ -968,6 +990,7 @@
 
   /* alert/feedback */
   .toast {
+    border-radius: var(--radius);
     position: fixed;
     bottom: 24px;
     right: 24px;
@@ -992,18 +1015,17 @@
   .toast-undo {
     display: inline-block;
     margin-left: 12px;
-    padding: 3px 10px;
+    padding: 4px 12px;
     background: var(--accent);
-    color: #000;
+    color: #fff;
     border: none;
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    font-weight: 500;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
     cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    border-radius: 4px;
   }
-  .toast-undo:hover { background: #d4ff45; }
+  .toast-undo:hover { background: #8daaff; }
 
   /* PRESET MANAGER */
   .preset-item {
@@ -1017,13 +1039,13 @@
   .preset-item:hover { background: var(--surface2); }
   .preset-item:last-child { border-bottom: none; }
   .preset-item-name {
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 13px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
     flex: 1;
   }
   .preset-item-meta {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--muted);
     line-height: 1.5;
   }
@@ -1041,16 +1063,17 @@
 
   /* FIT ANALYSIS BUTTON on day card */
   .fit-analysis-btn {
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     width: 100%;
     padding: 7px 10px;
-    background: rgba(78,168,222,0.08);
-    border: 1px solid rgba(78,168,222,0.25);
+    background: rgba(106,173,223,0.08);
+    border: 1px solid rgba(106,173,223,0.25);
     color: var(--blue);
-    font-family: 'DM Mono', monospace;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 10px;
     cursor: pointer;
     letter-spacing: 0.05em;
@@ -1059,7 +1082,7 @@
     text-transform: uppercase;
   }
   .fit-analysis-btn:hover {
-    background: rgba(78,168,222,0.16);
+    background: rgba(106,173,223,0.16);
     border-color: var(--blue);
   }
 
@@ -1070,7 +1093,9 @@
     gap: 1px;
     background: var(--border);
     border: 1px solid var(--border);
-    margin-bottom: 16px;
+    margin-bottom: 18px;
+    border-radius: var(--radius);
+    overflow: hidden;
   }
   .week-summary-cell {
     background: var(--surface);
@@ -1079,9 +1104,9 @@
     flex-direction: column;
     gap: 3px;
   }
-  .week-summary-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-  .week-summary-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; line-height: 1; }
-  .week-summary-sub { font-size: 9px; color: var(--muted); }
+  .week-summary-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  .week-summary-val { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 22px; line-height: 1; }
+  .week-summary-sub { font-size: 11px; color: var(--muted); }
   .week-summary-actions {
     background: var(--surface);
     padding: 8px 12px;
@@ -1093,27 +1118,29 @@
 
   /* Missing FIT highlight */
   .fit-missing-hint {
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 9px;
     color: var(--orange);
     padding: 4px 8px;
-    border: 1px solid rgba(255,159,67,0.3);
-    background: rgba(255,159,67,0.05);
+    border: 1px solid rgba(240,160,96,0.3);
+    background: rgba(240,160,96,0.05);
     margin-top: 2px;
   }
 
   /* FIT previously loaded hint */
   .fit-was-loaded-hint {
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 9px;
     color: var(--blue);
     padding: 4px 8px;
-    border: 1px solid rgba(78,168,222,0.2);
-    background: rgba(78,168,222,0.05);
+    border: 1px solid rgba(106,173,223,0.2);
+    background: rgba(106,173,223,0.05);
     margin-top: 2px;
     opacity: 0.7;
   }
@@ -1132,38 +1159,41 @@
   .post-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
   .rpe-btn-row { display: flex; gap: 5px; flex-wrap: wrap; }
   .rpe-btn {
-    width: 30px; height: 30px;
+    width: 34px; height: 34px;
     background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text2); font-family: 'Syne', sans-serif; font-weight: 700;
-    font-size: 11px; cursor: pointer; transition: all 0.12s;
+    color: var(--text2); font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;
+    font-size: 13px; cursor: pointer; transition: all 0.15s;
     display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
   }
-  .rpe-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-  .rpe-btn.selected { background: var(--accent2); border-color: var(--accent2); color: #000; }
+  .rpe-btn:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(93,228,184,0.08); }
+  .rpe-btn.selected { background: var(--accent2); border-color: var(--accent2); color: #fff; }
 
   /* STATS TAB */
   .stats-panel { display: none; }
   .stats-panel.active { display: block; }
-  .stats-section-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 4px; }
-  .stats-section-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+  .stats-section-title { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 20px; margin-bottom: 4px; }
+  .stats-section-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
   .period-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 8px; margin-bottom: 24px;
   }
   .period-week-card {
+    border-radius: var(--radius-sm);
     background: var(--surface); border: 1px solid var(--border);
     padding: 12px 14px; transition: border-color 0.15s; cursor: pointer;
   }
   .period-week-card.current-week { border-color: var(--accent); }
   .period-week-card:hover { border-color: var(--muted); }
   .period-week-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-  .period-week-tss { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; color: var(--accent); line-height: 1; margin-bottom: 2px; }
-  .period-week-meta { font-size: 9px; color: var(--muted); }
+  .period-week-tss { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 24px; color: var(--accent); line-height: 1; margin-bottom: 2px; }
+  .period-week-meta { font-size: 11px; color: var(--muted); }
   .period-week-phase { font-size: 8px; padding: 2px 6px; margin-top: 6px; display: inline-block; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
   .period-tss-bar-wrap { height: 3px; background: var(--surface2); margin-top: 10px; overflow: hidden; }
   .period-tss-bar { height: 100%; background: var(--accent); }
   .chart-wrap {
+    border-radius: var(--radius);
     background: var(--surface); border: 1px solid var(--border);
     padding: 20px; margin-bottom: 16px;
   }
@@ -1181,10 +1211,11 @@
   .export-option-row:last-child { border-bottom: none; }
   .export-option-row input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
   .export-preview-box {
+    border-radius: var(--radius-sm);
     background: var(--surface2); border: 1px solid var(--border);
     padding: 16px; font-size: 11px; line-height: 1.8; color: var(--text2);
     white-space: pre-wrap; max-height: 280px; overflow-y: auto;
-    margin-top: 12px; font-family: 'DM Mono', monospace;
+    margin-top: 12px; font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
   /* Move training picker */
@@ -1195,19 +1226,20 @@
     margin-top: 12px;
   }
   .move-target-btn {
+    border-radius: var(--radius-sm);
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text2);
     padding: 10px 4px;
     text-align: center;
-    font-family: 'DM Mono', monospace;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 10px;
     cursor: pointer;
     transition: all 0.15s;
   }
   .move-target-btn:hover { border-color: var(--accent); color: var(--accent); }
   .move-target-btn.is-source { border-color: var(--muted); color: var(--muted); opacity: 0.5; cursor: default; }
-  .move-target-btn .move-day-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; margin-bottom: 2px; }
+  .move-target-btn .move-day-name { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 12px; margin-bottom: 2px; }
   .move-target-btn .move-day-date { font-size: 9px; color: var(--muted); }
 
   /* Phase annotation */
@@ -1220,11 +1252,11 @@
     font-weight: 500;
     border: 1px solid;
   }
-  .phase-aufbau { color: var(--accent2); border-color: var(--accent2); background: rgba(61,245,160,0.06); }
-  .phase-erholung { color: var(--blue); border-color: var(--blue); background: rgba(78,168,222,0.06); }
-  .phase-peak { color: var(--orange); border-color: var(--orange); background: rgba(255,159,67,0.06); }
+  .phase-aufbau { color: var(--accent2); border-color: var(--accent2); background: rgba(93,228,184,0.06); }
+  .phase-erholung { color: var(--blue); border-color: var(--blue); background: rgba(106,173,223,0.06); }
+  .phase-peak { color: var(--orange); border-color: var(--orange); background: rgba(240,160,96,0.06); }
   .phase-test { color: var(--red); border-color: var(--red); background: rgba(255,77,109,0.06); }
-  .phase-base { color: var(--purple); border-color: var(--purple); background: rgba(155,114,207,0.06); }
+  .phase-base { color: var(--purple); border-color: var(--purple); background: rgba(168,130,224,0.06); }
   .phase-übergang { color: var(--muted); border-color: var(--muted); background: transparent; }
 
   /* Stats filter */
@@ -1232,11 +1264,12 @@
     display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;
   }
   .stats-filter-btn {
+    border-radius: var(--radius-sm);
     padding: 5px 14px;
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text2);
-    font-family: 'DM Mono', monospace;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 10px;
     cursor: pointer;
     transition: all 0.12s;
@@ -1343,9 +1376,9 @@
         <div class="chart-title-row">📊 Performance Management Chart (CTL · ATL · TSB)</div>
         <canvas id="chartPmc" height="160"></canvas>
         <div style="display:flex; gap:16px; margin-top:10px; font-size:9px;">
-          <span style="color:#3df5a0;">● CTL (Fitness, 42d)</span>
-          <span style="color:#ff4d6d;">● ATL (Ermüdung, 7d)</span>
-          <span style="color:#c8f135;">● TSB (Form = CTL − ATL)</span>
+          <span style="color:#5de4b8;">● CTL (Fitness, 42d)</span>
+          <span style="color:#f47087;">● ATL (Ermüdung, 7d)</span>
+          <span style="color:#7c9aff;">● TSB (Form = CTL − ATL)</span>
         </div>
       </div>
 
@@ -1571,7 +1604,7 @@ Beine • Squats → 15–20"></textarea>
           <div style="font-size:11px; color:var(--text2); line-height:1.6; margin-bottom:10px;">
             <span style="color:var(--accent2);">Wochentag</span> - <span style="color:var(--text);">Typ</span>, <span style="color:var(--orange);">Dauer</span>, <span style="color:var(--accent);">Watt</span>, <span style="color:var(--red);">Puls</span>, <span style="color:var(--blue);">RPE</span>, <span style="color:var(--purple);">Intervall</span>, <span style="color:var(--muted);">Notiz</span>
           </div>
-          <div style="padding:10px; background:var(--bg); border:1px solid var(--border); font-size:10px; color:var(--muted); line-height:2; font-family:'DM Mono',monospace;">
+          <div style="padding:10px; background:var(--bg); border:1px solid var(--border); font-size:10px; color:var(--muted); line-height:2; font-family:'Plus Jakarta Sans',sans-serif;">
             Mo - Zone 2, 90, 125-130, 130-140, 4, -, ruhig fahren<br>
             Di - Recovery, 60, 95-110, 115-125, 3, -, sehr locker<br>
             Mi - Stimulus, 75, -, 140-148, 6, 3x8min, nie härter als geplant
@@ -1585,7 +1618,7 @@ Beine • Squats → 15–20"></textarea>
           <div style="font-size:11px; color:var(--text2); line-height:1.6; margin-bottom:10px;">
             <span style="color:var(--accent2);">Tag</span> - <span style="color:var(--purple);">Gruppe • Übung → Reps</span>
           </div>
-          <div style="padding:10px; background:var(--bg); border:1px solid var(--border); font-size:10px; color:var(--muted); line-height:2; font-family:'DM Mono',monospace;">
+          <div style="padding:10px; background:var(--bg); border:1px solid var(--border); font-size:10px; color:var(--muted); line-height:2; font-family:'Plus Jakarta Sans',sans-serif;">
             Mo - Push • Liegestütze → 20-30 • Schulterdrücken → 12-15<br>
             Mo - Pull • Kurzhantelrudern → 12-15 je Seite
           </div>
@@ -1595,7 +1628,7 @@ Beine • Squats → 15–20"></textarea>
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; padding:12px; background:var(--surface2); border:1px solid var(--border);">
         <span style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap;">Zielwoche</span>
         <button onclick="importWeekShift(-1)" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">←</button>
-        <span id="importWeekLabel" style="font-family:'Syne',sans-serif; font-weight:600; font-size:12px; flex:1; text-align:center;"></span>
+        <span id="importWeekLabel" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:12px; flex:1; text-align:center;"></span>
         <button onclick="importWeekShift(1)" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">→</button>
         <button onclick="resetImportWeek()" class="btn btn-ghost" style="padding:4px 10px; font-size:10px; border-color:var(--accent); color:var(--accent);">Aktuell</button>
       </div>
@@ -1628,7 +1661,7 @@ Beine • Squats → 15–20"></textarea>
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px; padding:10px 14px; background:var(--surface2); border:1px solid var(--border);">
         <span style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap;">Woche</span>
         <button onclick="coachExportWeekShift(-1)" class="btn btn-ghost" style="padding:3px 10px; font-size:11px;">←</button>
-        <span id="coachExportWeekLabel" style="font-family:'Syne',sans-serif; font-weight:600; font-size:12px; flex:1; text-align:center;"></span>
+        <span id="coachExportWeekLabel" style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; font-size:12px; flex:1; text-align:center;"></span>
         <button onclick="coachExportWeekShift(1)" class="btn btn-ghost" style="padding:3px 10px; font-size:11px;">→</button>
         <button onclick="resetCoachExportWeek()" class="btn btn-ghost" style="padding:3px 10px; font-size:10px; border-color:var(--accent); color:var(--accent);">Aktuell</button>
       </div>
@@ -1954,7 +1987,7 @@ function renderWeek() {
 
       // Post-training notes preview
       if (entry.postNotes || entry.rpeActual || entry.durationActual) {
-        radHtml += `<div style="margin-top:4px; padding:6px 8px; background:rgba(200,241,53,0.04); border-left:2px solid var(--accent); font-size:10px; color:var(--text2);">`;
+        radHtml += `<div style="margin-top:4px; padding:6px 8px; background:rgba(124,154,255,0.06); border-left:2px solid rgba(124,154,255,0.4); font-size:10px; color:var(--text2);">`;
         if (entry.rpeActual) radHtml += `<span style="color:var(--accent);">RPE ${entry.rpeActual}</span>`;
         if (entry.durationActual) radHtml += `${entry.rpeActual ? ' · ' : ''}<span>${entry.durationActual} min tatsächlich</span>`;
         if (entry.postNotes) radHtml += `${(entry.rpeActual || entry.durationActual) ? '<br>' : ''}<span style="font-style:italic; color:var(--muted);">${entry.postNotes.substring(0,80)}${entry.postNotes.length>80?'…':''}</span>`;
@@ -1990,15 +2023,15 @@ function renderWeek() {
     if (hasKraft) {
       kraftBody.innerHTML = renderKraftPreview(entry.kraft)
         + `<button onclick="event.stopPropagation(); openKraftModal('${key}', new Date('${dateKey(d)}'), '${dayNames[i]}')"
-            style="margin-top:6px; background:none; border:1px solid var(--border); color:var(--text2); padding:5px 10px; font-size:10px; cursor:pointer; font-family:'DM Mono',monospace; text-align:left; transition:border-color 0.15s;"
+            style="margin-top:6px; background:none; border:1px solid var(--border); color:var(--text2); padding:5px 10px; font-size:10px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; text-align:left; transition:border-color 0.15s;"
             onmouseover="this.style.borderColor='var(--purple)'; this.style.color='var(--purple)'"
             onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text2)'">✏ Bearbeiten</button>`;
     } else {
       kraftBody.innerHTML = `<div class="day-kraft-empty">Noch kein Krafttraining eingetragen.</div>
         <button onclick="event.stopPropagation(); openKraftModal('${key}', new Date('${dateKey(d)}'), '${dayNames[i]}')"
-          style="margin-top:4px; background:none; border:1px dashed rgba(155,114,207,0.3); color:rgba(155,114,207,0.5); padding:6px 12px; font-size:10px; cursor:pointer; font-family:'DM Mono',monospace; transition:all 0.15s;"
+          style="margin-top:4px; background:none; border:1px dashed rgba(168,130,224,0.3); color:rgba(168,130,224,0.5); padding:6px 12px; font-size:10px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all 0.15s;"
           onmouseover="this.style.borderColor='var(--purple)'; this.style.color='var(--purple)'"
-          onmouseout="this.style.borderColor='rgba(155,114,207,0.3)'; this.style.color='rgba(155,114,207,0.5)'">+ Hinzufügen</button>`;
+          onmouseout="this.style.borderColor='rgba(168,130,224,0.3)'; this.style.color='rgba(168,130,224,0.5)'">+ Hinzufügen</button>`;
     }
 
     kraftSection.appendChild(kraftHeader);
@@ -2959,7 +2992,7 @@ function renderKraftPreview(kraftText) {
 // ============================================================
 const ZONE_PCT = [0, 0.55, 0.75, 0.90, 1.05];
 const ZONE_NAMES = ['Z1 Aktive Erholung', 'Z2 Ausdauer', 'Z3 Tempo', 'Z4 Schwelle', 'Z5 VO2max+'];
-const ZONE_COLORS = ['#4ea8de', '#3df5a0', '#c8f135', '#ff9f43', '#ff4d6d'];
+const ZONE_COLORS = ['#6aaddf', '#5de4b8', '#7c9aff', '#f0a060', '#f47087'];
 
 let settings = { ftp: 220, maxHr: 190, defaultKraft: '' };
 
@@ -2984,7 +3017,7 @@ function updateZonePreview() {
     <div style="display:flex; align-items:center; gap:10px;">
       <div style="width:3px; height:16px; background:${ZONE_COLORS[i]}; border-radius:1px; flex-shrink:0;"></div>
       <span style="font-size:10px; color:var(--text2); width:130px;">${name}</span>
-      <span style="font-size:11px; color:${ZONE_COLORS[i]}; font-family:'Syne',sans-serif; font-weight:600;">${ranges[i]}</span>
+      <span style="font-size:11px; color:${ZONE_COLORS[i]}; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600;">${ranges[i]}</span>
     </div>
   `).join('');
 }
@@ -3177,7 +3210,7 @@ function previewImport() {
     let html = `<div style="border:1px solid var(--border);"><div style="padding:8px 14px; background:var(--surface2); font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted);">${parsed.length} Einträge erkannt</div>`;
     parsed.forEach(p => {
       html += `<div style="padding:9px 14px; border-bottom:1px solid var(--border); display:flex; gap:10px; font-size:11px; align-items:center; flex-wrap:wrap;">
-        <span style="font-family:'Syne',sans-serif; font-weight:700; color:var(--text2); min-width:24px;">${dayNames[p.dayIdx]}</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; color:var(--text2); min-width:24px;">${dayNames[p.dayIdx]}</span>
         <span class="training-type-badge ${badgeClass(p.type)}">${typeLabel(p.type)}</span>
         ${p.duration ? `<span style="color:var(--text2);">${p.duration} min</span>` : ''}
         ${p.watt ? `<span style="color:var(--accent2);">⚡ ${p.watt} W</span>` : ''}
@@ -3198,7 +3231,7 @@ function previewImport() {
     parsed.forEach(p => { if (!byDay[p.dayIdx]) byDay[p.dayIdx] = []; byDay[p.dayIdx].push(p.kraftText); });
     let html = `<div style="border:1px solid var(--border);"><div style="padding:8px 14px; background:var(--surface2); font-size:9px; color:var(--muted);">${parsed.length} Zeilen erkannt</div>`;
     Object.entries(byDay).forEach(([dayIdx, texts]) => {
-      html += `<div style="padding:9px 14px; border-bottom:1px solid var(--border);"><span style="font-family:'Syne',sans-serif; font-weight:700; color:var(--purple); font-size:11px;">${dayNames[dayIdx]}</span><div style="margin-top:6px; font-size:10px; color:var(--text2); line-height:1.7;">${texts.join('<br>')}</div></div>`;
+      html += `<div style="padding:9px 14px; border-bottom:1px solid var(--border);"><span style="font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; color:var(--purple); font-size:11px;">${dayNames[dayIdx]}</span><div style="margin-top:6px; font-size:10px; color:var(--text2); line-height:1.7;">${texts.join('<br>')}</div></div>`;
     });
     html += '</div>';
     document.getElementById('importPreview').innerHTML = html;
@@ -3468,9 +3501,9 @@ function renderStatsTab() {
   // PMC Chart (CTL/ATL/TSB)
   renderPMCChart(weeks);
 
-  drawLineChart('chartTss', labels, [{ label: 'TSS', data: weeks.map(w => w.tss), color: '#c8f135', fill: true }]);
-  drawLineChart('chartPower', labels, [{ label: 'Ø Watt', data: weeks.map(w => w.avgPower || null), color: '#3df5a0', fill: false }]);
-  drawLineChart('chartHr', labels, [{ label: 'Ø HF', data: weeks.map(w => w.avgHr || null), color: '#ff4d6d', fill: false }]);
+  drawLineChart('chartTss', labels, [{ label: 'TSS', data: weeks.map(w => w.tss), color: '#7c9aff', fill: true }]);
+  drawLineChart('chartPower', labels, [{ label: 'Ø Watt', data: weeks.map(w => w.avgPower || null), color: '#5de4b8', fill: false }]);
+  drawLineChart('chartHr', labels, [{ label: 'Ø HF', data: weeks.map(w => w.avgHr || null), color: '#f47087', fill: false }]);
 
   const totalHfZones = [0, 0, 0, 0, 0];
   weeks.forEach(w => w.hfZoneTimes.forEach((t, i) => totalHfZones[i] += t));
@@ -3545,9 +3578,9 @@ function renderPMCChart(weeks) {
   }
 
   drawMultiLineChart('chartPmc', weeklyLabels, [
-    { label: 'CTL', data: weeklyCTL, color: '#3df5a0' },
-    { label: 'ATL', data: weeklyATL, color: '#ff4d6d' },
-    { label: 'TSB', data: weeklyTSB, color: '#c8f135', dashed: true },
+    { label: 'CTL', data: weeklyCTL, color: '#5de4b8' },
+    { label: 'ATL', data: weeklyATL, color: '#f47087' },
+    { label: 'TSB', data: weeklyTSB, color: '#7c9aff', dashed: true },
   ]);
 }
 
@@ -3580,7 +3613,7 @@ function drawMultiLineChart(canvasId, labels, datasets) {
     const y = pad.top + (j / 4) * chartH;
     ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
     const val = Math.round(maxV - (j / 4) * range);
-    ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono';
+    ctx.fillStyle = '#555860'; ctx.font = '10px Plus Jakarta Sans';
     ctx.textAlign = 'right'; ctx.fillText(val, pad.left - 4, y + 3);
   }
 
@@ -3593,7 +3626,7 @@ function drawMultiLineChart(canvasId, labels, datasets) {
   }
 
   // X labels
-  ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#555860'; ctx.font = '10px Plus Jakarta Sans'; ctx.textAlign = 'center';
   labels.forEach((l, i) => {
     if (n > 12 && i % 2 !== 0) return;
     ctx.fillText(l, xPos(i), H - 4);
@@ -3650,11 +3683,11 @@ function drawLineChart(canvasId, labels, datasets) {
     const y = pad.top + (j / 4) * chartH;
     ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
     const val = Math.round(maxV - (j / 4) * range);
-    ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono';
+    ctx.fillStyle = '#555860'; ctx.font = '10px Plus Jakarta Sans';
     ctx.textAlign = 'right'; ctx.fillText(val, pad.left - 4, y + 3);
   }
 
-  ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#555860'; ctx.font = '10px Plus Jakarta Sans'; ctx.textAlign = 'center';
   labels.forEach((l, i) => {
     if (n > 12 && i % 2 !== 0) return;
     ctx.fillText(l, xPos(i), H - 4);
@@ -3718,7 +3751,7 @@ function drawBarChart(canvasId, labels, values, colors) {
     ctx.fillRect(x, y, barW, barH);
     ctx.font = '10px DM Mono'; ctx.textAlign = 'center';
     ctx.fillText(v + '%', x + barW / 2, y - 4);
-    ctx.fillStyle = '#555860'; ctx.font = '9px DM Mono';
+    ctx.fillStyle = '#555860'; ctx.font = '10px Plus Jakarta Sans';
     ctx.fillText(labels[i], x + barW / 2, H - 4);
   });
 }
